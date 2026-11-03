@@ -3,7 +3,7 @@
 client_id = "SET_IN_SHOPIFY_DEV_DASHBOARD"
 name = "TCGplayer Importer"
 handle = "tcgplayer-importer"
-application_url = "https://your-public-domain.example.com/app"
+application_url = "https://tcgpimporter.pandorasdeckbox.com/app"
 embedded = true
 
 [build]
@@ -25,4 +25,4 @@ uri = "/webhooks/compliance"
 scopes = "write_products"
 
 [auth]
-redirect_urls = ["https://your-public-domain.example.com/auth/callback"]
+redirect_urls = ["https://tcgpimporter.pandorasdeckbox.com/auth/callback"]

@@ -68,8 +68,10 @@ repository.
 Deploy this repository as a Railway web service with a PostgreSQL database.
 Set `NODE_ENV=production`, `APP_URL`, `SHOPIFY_API_KEY`,
 `SHOPIFY_API_SECRET`, and `DATABASE_URL`; Railway supplies `PORT`. Update
-`application_url` and `redirect_urls` in `shopify.app.toml` to the actual HTTPS
-origin, then run `npm run shopify:deploy`.
+`client_id` in `shopify.app.toml` to the Shopify Dev Dashboard Client ID. The
+app and callback URLs are configured for
+`https://tcgpimporter.pandorasdeckbox.com`; keep these in sync with the Dev
+Dashboard if the domain changes. Then run `npm run shopify:deploy`.
 
 The app subscribes to `app/uninstalled` and Shopify's three mandatory privacy
 compliance topics. It stores only the shop domain and OAuth tokens, not
