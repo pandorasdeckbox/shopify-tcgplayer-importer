@@ -1,28 +1,30 @@
-# Select public distribution in the Shopify Dev Dashboard before publishing.
-# The distribution choice can't be changed after it is selected.
-client_id = "SET_IN_SHOPIFY_DEV_DASHBOARD"
-name = "TCGplayer Importer"
-handle = "tcgplayer-importer"
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "80d888f0f6bd77ae261413f3799b1dfa"
+name = "TCGplayer Product Importer"
 application_url = "https://tcgpimporter.pandorasdeckbox.com/app"
 embedded = true
+handle = "tcgplayer-importer"
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2026-10"
 
-[[webhooks.subscriptions]]
-topics = ["app/uninstalled"]
-uri = "/webhooks/app/uninstalled"
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/compliance"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
-[[webhooks.subscriptions]]
-compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
-uri = "/webhooks/compliance"
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
 
 [access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
-redirect_urls = ["https://tcgpimporter.pandorasdeckbox.com/auth/callback"]
+redirect_urls = [ "https://tcgpimporter.pandorasdeckbox.com/auth/callback" ]

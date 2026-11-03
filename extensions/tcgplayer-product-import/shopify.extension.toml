@@ -3,6 +3,7 @@ api_version = "2026-10"
 [[extensions]]
 name = "t:extension-name"
 handle = "tcgplayer-product-import"
+uid = "76a82c9e-437c-ad3d-3406-6078bf3394b636ce28b0"
 type = "ui_extension"
 
 [[extensions.targeting]]
