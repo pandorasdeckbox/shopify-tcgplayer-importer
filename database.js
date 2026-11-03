@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
-import Database from 'better-sqlite3';
 
 const { Pool } = pg;
 
@@ -68,6 +67,7 @@ export class AppDatabase {
       this.pool = new Pool({ connectionString: this.databaseUrl });
       await this.pool.query(POSTGRES_SCHEMA);
     } else {
+      const { default: Database } = await import('better-sqlite3');
       this.sqlite = new Database(this.sqlitePath);
       this.sqlite.pragma('journal_mode = WAL');
       this.sqlite.exec(SQLITE_SCHEMA);

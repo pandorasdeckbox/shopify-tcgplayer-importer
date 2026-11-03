@@ -18,7 +18,6 @@
     "node": "22.x"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "jose": "^6.2.1",
@@ -27,6 +26,7 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "@shopify/cli": "^5.0.0"
+    "@shopify/cli": "^5.0.0",
+    "better-sqlite3": "^13.0.3"
   }
 }
