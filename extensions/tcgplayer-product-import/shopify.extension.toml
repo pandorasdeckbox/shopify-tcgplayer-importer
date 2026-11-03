@@ -1,0 +1,10 @@
+api_version = "2026-10"
+
+[[extensions]]
+name = "t:extension-name"
+handle = "tcgplayer-product-import"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/ActionExtension.jsx"
+target = "admin.product-details.action.render"

@@ -1,0 +1,19 @@
+{
+  "extension-name": "Import from TCGplayer",
+  "url-label": "TCGplayer product URL",
+  "url-placeholder": "https://www.tcgplayer.com/product/711385/",
+  "lookup": "Fetch product details",
+  "create": "Create Draft product",
+  "cancel": "Cancel",
+  "start-over": "Start over",
+  "title-label": "Title",
+  "sku-label": "SKU",
+  "price-label": "Price (USD)",
+  "description-label": "Description (HTML)",
+  "image-note": "The image was prepared on a 1000 × 1000 white canvas.",
+  "loading": "Fetching product details and preparing the image…",
+  "creating": "Creating Draft product…",
+  "success": "Draft product created.",
+  "error-title": "Could not import product",
+  "edit-note": "Review and edit these fields before creating a new Draft product. Inventory will not be changed."
+}

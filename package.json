@@ -1,0 +1,32 @@
+{
+  "name": "tcgplayer-importer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "extensions/*"
+  ],
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "shopify:dev": "shopify app dev",
+    "shopify:deploy": "shopify app deploy",
+    "test": "node --test",
+    "lint": "node --check server.js && node --check config.js && node --check database.js && node --check auth.js && node --check tcgplayer.js && node --check image.js && node --check shopify-admin.js"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "jose": "^6.2.1",
+    "pg": "^8.16.3",
+    "sanitize-html": "^2.18.1",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@shopify/cli": "^5.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "tcgplayer-product-import-action",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "preact": "^10.27.2"
+  }
+}

@@ -1,0 +1,28 @@
+# Select public distribution in the Shopify Dev Dashboard before publishing.
+# The distribution choice can't be changed after it is selected.
+client_id = "SET_IN_SHOPIFY_DEV_DASHBOARD"
+name = "TCGplayer Importer"
+handle = "tcgplayer-importer"
+application_url = "https://your-public-domain.example.com/app"
+embedded = true
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-10"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/webhooks/app/uninstalled"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/webhooks/compliance"
+
+[access_scopes]
+scopes = "write_products"
+
+[auth]
+redirect_urls = ["https://your-public-domain.example.com/auth/callback"]
