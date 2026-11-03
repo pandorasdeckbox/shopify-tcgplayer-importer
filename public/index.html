@@ -7,12 +7,75 @@
     <title>TCGplayer Importer</title>
     <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
     <link rel="stylesheet" href="/app.css">
+    <script src="/app.js" defer></script>
   </head>
   <body>
-    <main>
-      <h1>TCGplayer Importer</h1>
-      <p>Open any product in Shopify Admin and choose <strong>Import from TCGplayer</strong> from its More actions menu.</p>
-      <p>The importer reviews TCGplayer details and creates a separate Draft product. It never changes the product page you opened it from.</p>
+    <main class="app-shell">
+      <header>
+        <h1>TCGplayer Importer</h1>
+        <p class="lede">Paste a TCGplayer product URL to start an import from this page.</p>
+        <p class="notice">The importer creates a separate Draft product. It does not change an existing product or its inventory.</p>
+      </header>
+
+      <section id="lookup-panel" class="panel" aria-labelledby="lookup-heading">
+        <h2 id="lookup-heading">Import a product</h2>
+        <form id="lookup-form">
+          <label for="tcgplayer-url">TCGplayer product URL</label>
+          <div class="form-row">
+            <input
+              id="tcgplayer-url"
+              name="url"
+              type="url"
+              placeholder="https://www.tcgplayer.com/product/711385/"
+              autocomplete="url"
+              required
+            >
+            <button id="fetch-button" type="submit">Fetch product details</button>
+          </div>
+        </form>
+      </section>
+
+      <p id="import-status" class="status-message" role="status" aria-live="polite"></p>
+      <p id="import-error" class="error-message" role="alert" hidden></p>
+
+      <section id="preview-panel" class="panel" aria-labelledby="preview-heading" hidden>
+        <h2 id="preview-heading">Review draft product</h2>
+        <p>Review and edit the imported details before creating the Draft.</p>
+        <div class="preview-grid">
+          <div class="image-frame">
+            <img id="product-image" alt="">
+          </div>
+          <form id="product-form">
+            <label for="product-title">Title</label>
+            <input id="product-title" name="title" type="text" required>
+
+            <label for="product-sku">SKU</label>
+            <input id="product-sku" name="sku" type="text" required>
+
+            <label for="product-price">Price (USD)</label>
+            <input id="product-price" name="price" type="text" inputmode="decimal" required>
+
+            <label for="product-description">Description (HTML)</label>
+            <textarea id="product-description" name="description" rows="12"></textarea>
+
+            <p class="help-text">The image is centered on a 1000 x 1000 white canvas. Inventory will not be changed.</p>
+            <div class="button-row">
+              <button id="create-button" type="submit">Create Draft product</button>
+              <button id="start-over-button" class="secondary-button" type="button">Start over</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="success-panel" class="panel success-panel" aria-labelledby="success-heading" role="status" aria-live="polite" hidden>
+        <h2 id="success-heading">Draft product created</h2>
+        <p id="created-title"></p>
+        <p id="created-details"></p>
+        <a id="created-link" target="_blank" rel="noopener">Open draft in Shopify Admin</a>
+        <div class="button-row">
+          <button id="another-import-button" type="button">Import another product</button>
+        </div>
+      </section>
     </main>
   </body>
 </html>

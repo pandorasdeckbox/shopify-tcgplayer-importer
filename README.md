@@ -1,9 +1,10 @@
 # TCGplayer Importer
 
 Public, multi-store Shopify app scaffold for importing a product from a
-TCGplayer product page. From a Shopify product details page, use **More actions
-→ Import from TCGplayer**, paste a product URL, review/edit the imported fields,
-and explicitly create a separate Draft product.
+TCGplayer product page. Start an import from the app's home page, or open a
+Shopify product details page and use **More actions → Import from TCGplayer**.
+Paste a product URL, review/edit the imported fields, and explicitly create a
+separate Draft product.
 
 The app imports the TCGplayer product name, description, Market Price, and
 product image. The URL's numeric product ID is the default variant SKU. Market
@@ -22,6 +23,7 @@ app or reusing its product content.
 ## Stack
 
 - Node.js 22, Express, Shopify Admin GraphQL API
+- Embedded app home with a TCGplayer URL import workflow
 - Shopify Admin UI action extension at
   `admin.product-details.action.render` (the Product Details More actions menu)
 - Shopify public OAuth with expiring offline tokens and refresh-token rotation

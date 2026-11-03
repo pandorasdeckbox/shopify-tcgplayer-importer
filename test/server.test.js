@@ -93,7 +93,7 @@ test('exchanges the OAuth code for expiring offline tokens', async t => {
   assert.equal(session.refreshToken, 'offline-refresh-token');
 });
 
-test('authenticates the Admin action, previews fields/image, and creates a separate Draft', async t => {
+test('serves the embedded importer and authenticates preview/create requests', async t => {
   const db = await new AppDatabase({ sqlitePath: ':memory:' }).init();
   t.after(() => db.close());
   await db.storeShopifySession({
@@ -165,6 +165,18 @@ test('authenticates the Admin action, previews fields/image, and creates a separ
   });
   const baseUrl = await withRunningApp(t, app);
   const idToken = await createIdToken();
+
+  const appHomeResponse = await fetch(`${baseUrl}/app?shop=${shop}`);
+  assert.equal(appHomeResponse.status, 200);
+  const appHome = await appHomeResponse.text();
+  assert.match(appHome, /id="lookup-form"/);
+  assert.match(appHome, /src="\/app\.js"/);
+
+  const appScriptResponse = await fetch(`${baseUrl}/app.js`);
+  assert.equal(appScriptResponse.status, 200);
+  const appScript = await appScriptResponse.text();
+  assert.match(appScript, /\/api\/import\/preview/);
+  assert.match(appScript, /\/api\/import\/create/);
 
   const unauthenticated = await fetch(`${baseUrl}/api/import/preview`, {
     method: 'POST',
