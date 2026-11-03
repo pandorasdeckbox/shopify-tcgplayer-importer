@@ -52,7 +52,6 @@ function successfulShopifyFetch(requests) {
               variants: { nodes: [{ id: 'gid://shopify/ProductVariant/9002' }] },
             },
             userErrors: [],
-            mediaUserErrors: [],
           },
         },
       });
@@ -94,7 +93,9 @@ test('uploads an image and creates a Draft product with the default variant SKU 
   assert.equal(product.adminUrl, 'https://example-store.myshopify.com/admin/products/9001');
 
   const createRequest = requests.find(request => request.url.endsWith('/graphql.json') && JSON.parse(request.options.body).query.includes('productCreate'));
-  const createVariables = JSON.parse(createRequest.options.body).variables;
+  const createBody = JSON.parse(createRequest.options.body);
+  const createVariables = createBody.variables;
+  assert.doesNotMatch(createBody.query, /\bmediaUserErrors\b/);
   assert.equal(createVariables.product.status, 'DRAFT');
   assert.equal(createVariables.product.title, 'Booster Box');
   assert.deepEqual(createVariables.media, [{
@@ -148,7 +149,6 @@ test('deletes a newly created product if its variant cannot be updated', async (
               variants: { nodes: [{ id: 'gid://shopify/ProductVariant/9002' }] },
             },
             userErrors: [],
-            mediaUserErrors: [],
           },
         },
       });

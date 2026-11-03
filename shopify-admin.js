@@ -164,7 +164,6 @@ export class ShopifyAdminClient {
             }
           }
           userErrors { field message }
-          mediaUserErrors { field message }
         }
       }`,
       variables: {
@@ -176,7 +175,7 @@ export class ShopifyAdminClient {
     const created = productData.productCreate;
     const product = created?.product;
     const productId = product?.id;
-    if (!product || created?.userErrors?.length || created?.mediaUserErrors?.length) {
+    if (!product || created?.userErrors?.length) {
       if (productId) {
         try {
           await this.deleteProduct({ session, productId });
@@ -187,10 +186,7 @@ export class ShopifyAdminClient {
           );
         }
       }
-      const messages = [
-        ...userErrorMessages(created?.userErrors),
-        ...userErrorMessages(created?.mediaUserErrors),
-      ];
+      const messages = userErrorMessages(created?.userErrors);
       throw new ShopifyAdminError(messages.join('; ') || 'Shopify did not create the draft product');
     }
 
