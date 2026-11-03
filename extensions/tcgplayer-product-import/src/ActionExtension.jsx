@@ -32,6 +32,7 @@ function Extension() {
   const [createdProduct, setCreatedProduct] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [tagsText, setTagsText] = useState('');
 
   const lookup = async () => {
     setBusy(true);
@@ -39,6 +40,7 @@ function Extension() {
     try {
       const result = await postJson('/api/import/preview', { url });
       setProduct(result.product);
+      setTagsText((result.product.tags || []).join(', '));
       setCreatedProduct(null);
     } catch (requestError) {
       setError(requestError.message);
@@ -57,6 +59,11 @@ function Extension() {
         sku: product.sku,
         price: product.price,
         descriptionHtml: product.descriptionHtml,
+        vendor: product.vendor,
+        categoryId: product.categoryId,
+        productType: product.productType,
+        templateSuffix: product.templateSuffix,
+        tags: tagsText,
       });
       setCreatedProduct(result.product);
     } catch (requestError) {
@@ -70,8 +77,23 @@ function Extension() {
     setUrl('');
     setProduct(null);
     setCreatedProduct(null);
+    setTagsText('');
     setError('');
   };
+
+  const catalogSuggestions = product?.catalogSuggestions || {
+    similarProductCount: 0,
+    similarProducts: [],
+    vendors: [],
+    categories: [],
+    productTypes: [],
+    templates: [],
+    tags: [],
+  };
+  const defaultTemplateSuggestion = catalogSuggestions.templates.find(item => !item.value);
+  const suggestionText = suggestions => suggestions
+    .map(suggestion => `${suggestion.value} (${suggestion.count})`)
+    .join(', ');
 
   return (
     <s-admin-action heading={i18n.translate('extension-name')}>
@@ -131,6 +153,66 @@ function Extension() {
                 onChange={event => setProduct({ ...product, descriptionHtml: event.target.value })}
                 disabled={busy}
               />
+              <s-text>
+                {catalogSuggestions.similarProductCount
+                  ? `${i18n.translate('catalog-suggestions')} (${catalogSuggestions.similarProductCount}): ${catalogSuggestions.similarProducts.map(item => item.title).join('; ')}`
+                  : i18n.translate('no-similar-products')}
+              </s-text>
+              <s-text-field
+                label={i18n.translate('vendor-label')}
+                value={product.vendor}
+                onChange={event => setProduct({ ...product, vendor: event.target.value })}
+                disabled={busy}
+              />
+              {catalogSuggestions.vendors.length ? (
+                <s-text>{`${i18n.translate('vendor-suggestions')}: ${suggestionText(catalogSuggestions.vendors)}`}</s-text>
+              ) : null}
+              <s-select
+                label={i18n.translate('category-label')}
+                value={product.categoryId}
+                onChange={event => setProduct({ ...product, categoryId: event.target.value })}
+                disabled={busy}
+              >
+                <s-option value="">{i18n.translate('no-category')}</s-option>
+                {catalogSuggestions.categories.map(category => (
+                  <s-option key={category.id} value={category.id}>
+                    {`${category.fullName || category.name} (${category.count})`}
+                  </s-option>
+                ))}
+              </s-select>
+              <s-text-field
+                label={i18n.translate('type-label')}
+                value={product.productType}
+                onChange={event => setProduct({ ...product, productType: event.target.value })}
+                disabled={busy}
+              />
+              {catalogSuggestions.productTypes.length ? (
+                <s-text>{`${i18n.translate('type-suggestions')}: ${suggestionText(catalogSuggestions.productTypes)}`}</s-text>
+              ) : null}
+              <s-select
+                label={i18n.translate('template-label')}
+                value={product.templateSuffix}
+                onChange={event => setProduct({ ...product, templateSuffix: event.target.value })}
+                disabled={busy}
+              >
+                <s-option value="">
+                  {`Default product${defaultTemplateSuggestion ? ` (${defaultTemplateSuggestion.count})` : ''}`}
+                </s-option>
+                {catalogSuggestions.templates.filter(item => item.value).map(template => (
+                  <s-option key={template.value} value={template.value}>
+                    {`${template.label} (${template.count})`}
+                  </s-option>
+                ))}
+              </s-select>
+              <s-text-field
+                label={i18n.translate('tags-label')}
+                value={tagsText}
+                onChange={event => setTagsText(event.target.value)}
+                disabled={busy}
+              />
+              {catalogSuggestions.tags.length ? (
+                <s-text>{`${i18n.translate('tag-suggestions')}: ${suggestionText(catalogSuggestions.tags)}`}</s-text>
+              ) : null}
               <s-text>{i18n.translate('image-note')}</s-text>
             </>
           )}

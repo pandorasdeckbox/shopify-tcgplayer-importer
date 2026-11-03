@@ -58,6 +58,40 @@
             <label for="product-description">Description (HTML)</label>
             <textarea id="product-description" name="description" rows="12"></textarea>
 
+            <fieldset class="metadata-section">
+              <legend>Shopify catalog details</legend>
+              <p id="catalog-suggestion-summary" class="metadata-note" role="status" aria-live="polite"></p>
+              <div class="metadata-grid">
+                <div class="metadata-field">
+                  <label for="product-vendor">Vendor</label>
+                  <input id="product-vendor" name="vendor" type="text" list="vendor-suggestions" autocomplete="off">
+                  <datalist id="vendor-suggestions"></datalist>
+                </div>
+                <div class="metadata-field">
+                  <label for="product-category">Category</label>
+                  <select id="product-category" name="categoryId">
+                    <option value="">No category suggestion</option>
+                  </select>
+                </div>
+                <div class="metadata-field">
+                  <label for="product-type">Product type</label>
+                  <input id="product-type" name="productType" type="text" list="product-type-suggestions" autocomplete="off">
+                  <datalist id="product-type-suggestions"></datalist>
+                </div>
+                <div class="metadata-field">
+                  <label for="product-template">Theme template</label>
+                  <select id="product-template" name="templateSuffix">
+                    <option value="">Default product</option>
+                  </select>
+                </div>
+                <div class="metadata-field">
+                  <label for="product-tags">Tags</label>
+                  <input id="product-tags" name="tags" type="text" placeholder="Separate tags with commas">
+                  <div id="tag-suggestions" class="tag-suggestions" aria-label="Suggested tags"></div>
+                </div>
+              </div>
+            </fieldset>
+
             <p class="help-text">The image is centered on a 1000 x 1000 white canvas. Inventory will not be changed.</p>
             <div class="button-row">
               <button id="create-button" type="submit">Create Draft product</button>

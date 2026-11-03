@@ -58,7 +58,8 @@ form label {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   min-width: 0;
   padding: 11px 12px;
@@ -74,6 +75,7 @@ textarea {
 
 input:focus,
 textarea:focus,
+select:focus,
 button:focus-visible,
 a:focus-visible {
   outline: 2px solid #005bd3;
@@ -139,6 +141,52 @@ button:disabled {
   margin-top: 8px;
 }
 
+.metadata-section {
+  min-width: 0;
+  margin: 12px 0 0;
+  padding: 18px;
+  border: 1px solid #e1e3e5;
+  border-radius: 8px;
+}
+
+.metadata-section legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.metadata-note {
+  margin: 0 0 16px;
+  color: #616a75;
+  font-size: 0.9rem;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metadata-field {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-suggestion {
+  min-height: 32px;
+  padding: 4px 10px;
+  border-color: #8c9196;
+  background: #fff;
+  color: #202223;
+  font-size: 0.85rem;
+}
+
 .help-text {
   margin: 4px 0 0;
   font-size: 0.9rem;
@@ -191,7 +239,8 @@ button:disabled {
   }
 
   .form-row,
-  .preview-grid {
+  .preview-grid,
+  .metadata-grid {
     grid-template-columns: 1fr;
   }
 

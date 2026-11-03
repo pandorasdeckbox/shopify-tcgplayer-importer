@@ -30,6 +30,153 @@ function numericProductId(gid) {
   return match?.[1] || null;
 }
 
+const PRODUCT_TITLE_STOP_WORDS = new Set([
+  'a', 'an', 'and', 'booster', 'box', 'bundle', 'card', 'cards', 'case',
+  'collection', 'deck', 'display', 'edition', 'for', 'from', 'game',
+  'pack', 'product', 'series', 'set', 'starter', 'tcg', 'the', 'trading',
+  'vol', 'volume', 'with',
+]);
+
+function productTitleTokens(title) {
+  const words = String(title || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .match(/[a-z0-9]+/g) || [];
+  return [...new Set(words.filter(word => (
+    word.length > 1
+    && !/^\d+$/.test(word)
+    && !PRODUCT_TITLE_STOP_WORDS.has(word)
+  )))];
+}
+
+function countSuggestions(products, valueForProduct) {
+  const counts = new Map();
+  for (const product of products) {
+    const value = valueForProduct(product);
+    if (typeof value !== 'string' || !value.trim()) continue;
+    const normalized = value.trim();
+    const key = normalized.toLocaleLowerCase();
+    const existing = counts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      counts.set(key, { value: normalized, count: 1 });
+    }
+  }
+  return [...counts.values()]
+    .sort((left, right) => right.count - left.count || left.value.localeCompare(right.value))
+    .slice(0, 8);
+}
+
+function countProductTags(products) {
+  const counts = new Map();
+  for (const product of products) {
+    const productTags = new Map(
+      (product.tags || [])
+        .filter(tag => typeof tag === 'string' && tag.trim())
+        .map(tag => [tag.trim().toLocaleLowerCase(), tag.trim()]),
+    );
+    for (const [key, value] of productTags) {
+      const existing = counts.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        counts.set(key, { value, count: 1 });
+      }
+    }
+  }
+  return [...counts.values()]
+    .sort((left, right) => right.count - left.count || left.value.localeCompare(right.value))
+    .slice(0, 12);
+}
+
+function countTemplateSuggestions(products) {
+  const counts = new Map();
+  for (const product of products) {
+    const value = typeof product.templateSuffix === 'string' ? product.templateSuffix : '';
+    const key = value.toLocaleLowerCase();
+    const existing = counts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      counts.set(key, {
+        value,
+        label: value || 'Default product',
+        count: 1,
+      });
+    }
+  }
+  return [...counts.values()]
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+    .slice(0, 8);
+}
+
+function buildProductMetadataSuggestions(products, title, sourceSku) {
+  const titleTerms = productTitleTokens(title);
+  if (!titleTerms.length) {
+    return {
+      similarProductCount: 0,
+      similarProducts: [],
+      vendors: [],
+      categories: [],
+      productTypes: [],
+      templates: [],
+      tags: [],
+    };
+  }
+
+  const minimumMatches = Math.min(2, titleTerms.length);
+  const similarProducts = products
+    .filter(product => !sourceSku || !product.variants?.nodes?.some(variant => variant.sku === sourceSku))
+    .map(product => {
+      const productTerms = new Set(productTitleTokens(product.title));
+      const matchCount = titleTerms.filter(term => productTerms.has(term)).length;
+      return { ...product, matchCount };
+    })
+    .filter(product => product.matchCount >= minimumMatches)
+    .sort((left, right) => right.matchCount - left.matchCount);
+  const categories = new Map();
+  for (const product of similarProducts) {
+    const category = product.category;
+    if (!category?.id || !category.fullName) continue;
+    const existing = categories.get(category.id);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      categories.set(category.id, {
+        id: category.id,
+        name: category.name,
+        fullName: category.fullName,
+        count: 1,
+      });
+    }
+  }
+
+  const examples = [];
+  const seenTitles = new Set();
+  for (const product of similarProducts) {
+    const productTitle = String(product.title || '').trim();
+    const key = productTitle.toLocaleLowerCase();
+    if (!productTitle || seenTitles.has(key)) continue;
+    seenTitles.add(key);
+    examples.push({ title: productTitle, vendor: product.vendor || '' });
+    if (examples.length === 3) break;
+  }
+
+  return {
+    similarProductCount: similarProducts.length,
+    similarProducts: examples,
+    vendors: countSuggestions(similarProducts, product => product.vendor),
+    categories: [...categories.values()]
+      .sort((left, right) => right.count - left.count || left.fullName.localeCompare(right.fullName))
+      .slice(0, 8),
+    productTypes: countSuggestions(similarProducts, product => product.productType),
+    templates: countTemplateSuggestions(similarProducts),
+    tags: countProductTags(similarProducts),
+  };
+}
+
 export class ShopifyAdminClient {
   constructor({ apiVersion = '2026-10', fetchImpl = globalThis.fetch, timeoutMs = 30_000 } = {}) {
     this.apiVersion = apiVersion;
@@ -76,6 +223,38 @@ export class ShopifyAdminClient {
       throw new ShopifyAdminError('Shopify Admin API returned no data');
     }
     return payload.data;
+  }
+
+  async getProductMetadataSuggestions({ session, title, sku }) {
+    const titleTerms = productTitleTokens(title).slice(0, 8);
+    if (!titleTerms.length) {
+      return buildProductMetadataSuggestions([], title, sku);
+    }
+
+    const data = await this.graphql({
+      session,
+      query: `query ProductMetadataSuggestions($search: String!) {
+        products(first: 100, query: $search, sortKey: RELEVANCE) {
+          nodes {
+            title
+            vendor
+            productType
+            templateSuffix
+            category { id name fullName }
+            tags
+            variants(first: 5) { nodes { sku } }
+          }
+        }
+      }`,
+      variables: {
+        search: titleTerms.map(term => `title:${term}`).join(' OR '),
+      },
+    });
+    const products = data.products?.nodes;
+    if (!Array.isArray(products)) {
+      throw new ShopifyAdminError('Shopify did not return product catalog suggestions');
+    }
+    return buildProductMetadataSuggestions(products, title, sku);
   }
 
   async uploadProductImage({ session, image }) {
@@ -148,8 +327,26 @@ export class ShopifyAdminClient {
     }
   }
 
-  async createDraftProduct({ session, title, descriptionHtml, sku, price, image }) {
+  async createDraftProduct({
+    session,
+    title,
+    descriptionHtml,
+    sku,
+    price,
+    vendor = '',
+    categoryId = '',
+    productType = '',
+    templateSuffix = '',
+    tags = [],
+    image,
+  }) {
     const originalSource = await this.uploadProductImage({ session, image });
+    const productInput = { title, descriptionHtml, status: 'DRAFT' };
+    if (vendor) productInput.vendor = vendor;
+    if (categoryId) productInput.category = categoryId;
+    if (productType) productInput.productType = productType;
+    if (templateSuffix) productInput.templateSuffix = templateSuffix;
+    if (tags.length) productInput.tags = tags;
     const productData = await this.graphql({
       session,
       query: `mutation CreateDraftProduct($product: ProductCreateInput!, $media: [CreateMediaInput!]) {
@@ -167,7 +364,7 @@ export class ShopifyAdminClient {
         }
       }`,
       variables: {
-        product: { title, descriptionHtml, status: 'DRAFT' },
+        product: productInput,
         media: [{ originalSource, alt: title, mediaContentType: 'IMAGE' }],
       },
     });

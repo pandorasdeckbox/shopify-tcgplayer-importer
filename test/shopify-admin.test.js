@@ -83,6 +83,11 @@ test('uploads an image and creates a Draft product with the default variant SKU 
     descriptionHtml: '<p>Description</p>',
     sku: '711385',
     price: '266.00',
+    vendor: 'Bandai',
+    categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
+    productType: 'Trading Card Game',
+    templateSuffix: 'card-game',
+    tags: ['One Piece'],
     image,
   });
 
@@ -98,6 +103,11 @@ test('uploads an image and creates a Draft product with the default variant SKU 
   assert.doesNotMatch(createBody.query, /\bmediaUserErrors\b/);
   assert.equal(createVariables.product.status, 'DRAFT');
   assert.equal(createVariables.product.title, 'Booster Box');
+  assert.equal(createVariables.product.vendor, 'Bandai');
+  assert.equal(createVariables.product.category, 'gid://shopify/TaxonomyCategory/aa-1-2');
+  assert.equal(createVariables.product.productType, 'Trading Card Game');
+  assert.equal(createVariables.product.templateSuffix, 'card-game');
+  assert.deepEqual(createVariables.product.tags, ['One Piece']);
   assert.deepEqual(createVariables.media, [{
     originalSource: 'https://staged-resource.example.com/image.jpg',
     alt: 'Booster Box',
@@ -116,6 +126,105 @@ test('uploads an image and creates a Draft product with the default variant SKU 
   assert.equal(upload.options.method, 'POST');
   assert.equal(upload.options.body.get('key'), 'image-key');
   assert.equal(upload.options.body.get('file').name, 'tcgplayer-711385.jpg');
+});
+
+test('suggests metadata from matching Shopify catalog products', async () => {
+  const requests = [];
+  const client = new ShopifyAdminClient({
+    fetchImpl: async (url, options) => {
+      requests.push({ url, options });
+      return response({
+        data: {
+          products: {
+            nodes: [
+              {
+                title: 'One Piece Heroines Booster Box',
+                vendor: 'Wrong default vendor',
+                productType: 'Uncategorized',
+                templateSuffix: 'wrong-default',
+                category: { id: 'gid://shopify/TaxonomyCategory/other', name: 'Other', fullName: 'Other' },
+                tags: ['Wrong default'],
+                variants: { nodes: [{ sku: '711385' }] },
+              },
+              {
+                title: 'One Piece Starter Deck',
+                vendor: 'Bandai',
+                productType: 'Trading Card Game',
+                templateSuffix: '',
+                category: {
+                  id: 'gid://shopify/TaxonomyCategory/aa-1-2',
+                  name: 'Trading Cards',
+                  fullName: 'Toys & Games > Games > Trading Cards',
+                },
+                tags: ['One Piece', 'Card Game'],
+                variants: { nodes: [{ sku: 'OP01' }] },
+              },
+              {
+                title: 'One Piece Romance Dawn Booster Box',
+                vendor: 'Bandai',
+                productType: 'Trading Card Game',
+                templateSuffix: 'card-game',
+                category: {
+                  id: 'gid://shopify/TaxonomyCategory/aa-1-2',
+                  name: 'Trading Cards',
+                  fullName: 'Toys & Games > Games > Trading Cards',
+                },
+                tags: ['One Piece', 'Booster Box'],
+                variants: { nodes: [{ sku: 'OP02' }] },
+              },
+              {
+                title: 'Pokemon Elite Trainer Box',
+                vendor: 'Pokemon',
+                productType: 'Cards',
+                category: null,
+                tags: ['Pokemon'],
+                variants: { nodes: [{ sku: 'PK01' }] },
+              },
+            ],
+          },
+        },
+      });
+    },
+  });
+
+  const suggestions = await client.getProductMetadataSuggestions({
+    session,
+    title: 'Extra Booster: One Piece Heroines Edition Vol.2 - Booster Box',
+    sku: '711385',
+  });
+
+  assert.equal(suggestions.similarProductCount, 2);
+  assert.deepEqual(suggestions.vendors, [{ value: 'Bandai', count: 2 }]);
+  assert.deepEqual(suggestions.categories, [{
+    id: 'gid://shopify/TaxonomyCategory/aa-1-2',
+    name: 'Trading Cards',
+    fullName: 'Toys & Games > Games > Trading Cards',
+    count: 2,
+  }]);
+  assert.deepEqual(suggestions.productTypes, [{ value: 'Trading Card Game', count: 2 }]);
+  assert.equal(suggestions.templates.find(template => !template.value).count, 1);
+  assert.deepEqual(suggestions.templates.find(template => template.value), {
+    value: 'card-game',
+    label: 'card-game',
+    count: 1,
+  });
+  assert.deepEqual(suggestions.tags, [
+    { value: 'One Piece', count: 2 },
+    { value: 'Booster Box', count: 1 },
+    { value: 'Card Game', count: 1 },
+  ]);
+  assert.deepEqual(suggestions.similarProducts.map(product => product.title), [
+    'One Piece Starter Deck',
+    'One Piece Romance Dawn Booster Box',
+  ]);
+
+  const request = requests[0];
+  const body = JSON.parse(request.options.body);
+  assert.match(body.query, /category \{ id name fullName \}/);
+  assert.equal(
+    body.variables.search,
+    'title:extra OR title:one OR title:piece OR title:heroines',
+  );
 });
 
 test('deletes a newly created product if its variant cannot be updated', async () => {

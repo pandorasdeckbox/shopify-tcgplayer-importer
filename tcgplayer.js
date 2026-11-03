@@ -161,15 +161,60 @@ export async function fetchTcgplayerProduct({ url, fetchImpl = globalThis.fetch,
   };
 }
 
+function normalizeOptionalMetadataText(value, label) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') throw new TcgplayerInputError(`${label} must be text`);
+  const normalized = value.trim();
+  if (normalized.length > 255 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw new TcgplayerInputError(`${label} must be 255 printable characters or fewer`);
+  }
+  return normalized;
+}
+
+function normalizeProductTags(value) {
+  if (value === undefined || value === null || value === '') return [];
+  const values = typeof value === 'string' ? value.split(',') : value;
+  if (!Array.isArray(values)) throw new TcgplayerInputError('Tags must be a comma-separated list');
+  if (values.length > 250) throw new TcgplayerInputError('A product can have at most 250 tags');
+
+  const tags = [];
+  const seen = new Set();
+  for (const value of values) {
+    if (typeof value !== 'string') throw new TcgplayerInputError('Tags must be text');
+    const tag = value.trim();
+    if (!tag) continue;
+    if (tag.length > 255 || /[\u0000-\u001f\u007f]/.test(tag)) {
+      throw new TcgplayerInputError('Tags must be 255 printable characters or fewer');
+    }
+    const key = tag.toLocaleLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      tags.push(tag);
+    }
+  }
+  return tags;
+}
+
 export function normalizeDraftFields(fields) {
   const sourceProductId = extractTcgplayerProductId(fields?.sourceUrl);
   const title = normalizedTitle(fields?.title);
   const sku = String(fields?.sku ?? '').trim();
   const descriptionHtml = sanitizeDescriptionHtml(fields?.descriptionHtml);
   const price = floorPriceToDollars(fields?.price);
+  const vendor = normalizeOptionalMetadataText(fields?.vendor, 'Vendor');
+  const productType = normalizeOptionalMetadataText(fields?.productType, 'Product type');
+  const categoryId = normalizeOptionalMetadataText(fields?.categoryId, 'Product category');
+  const templateSuffix = normalizeOptionalMetadataText(fields?.templateSuffix, 'Theme template');
+  const tags = normalizeProductTags(fields?.tags);
 
   if (!title || title.length > 255) {
     throw new TcgplayerInputError('Title must be between 1 and 255 characters');
+  }
+  if (
+    categoryId
+    && !/^gid:\/\/shopify\/TaxonomyCategory\/[A-Za-z0-9._-]+$/.test(categoryId)
+  ) {
+    throw new TcgplayerInputError('Choose a product category from the Shopify suggestions');
   }
   if (!sku || sku.length > 100 || /[\u0000-\u001f\u007f]/.test(sku)) {
     throw new TcgplayerInputError('SKU must be between 1 and 100 printable characters');
@@ -178,5 +223,16 @@ export function normalizeDraftFields(fields) {
     throw new TcgplayerInputError('Description cannot be empty');
   }
 
-  return { sourceProductId, title, sku, descriptionHtml, price };
+  return {
+    sourceProductId,
+    title,
+    sku,
+    descriptionHtml,
+    price,
+    vendor,
+    categoryId,
+    productType,
+    templateSuffix,
+    tags,
+  };
 }

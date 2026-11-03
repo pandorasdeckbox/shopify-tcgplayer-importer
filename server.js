@@ -205,13 +205,26 @@ export function createApp({
   app.post('/api/import/preview', auth.requireShopifySession, async (req, res, next) => {
     try {
       const product = await fetchTcgplayerProduct({ url: req.body?.url, fetchImpl });
-      const image = await normalizeProductImage({
-        productId: product.sourceProductId,
-        fetchImpl,
-      });
+      const [image, catalogSuggestions] = await Promise.all([
+        normalizeProductImage({
+          productId: product.sourceProductId,
+          fetchImpl,
+        }),
+        adminClient.getProductMetadataSuggestions({
+          session: req.shopifySession,
+          title: product.title,
+          sku: product.sku,
+        }),
+      ]);
       return res.json({
         product: {
           ...product,
+          vendor: catalogSuggestions.vendors[0]?.value || '',
+          categoryId: catalogSuggestions.categories[0]?.id || '',
+          productType: catalogSuggestions.productTypes[0]?.value || '',
+          templateSuffix: catalogSuggestions.templates[0]?.value || '',
+          tags: [],
+          catalogSuggestions,
           imagePreviewDataUrl: `data:${image.mimeType};base64,${image.buffer.toString('base64')}`,
           imageDimensions: { width: image.width, height: image.height },
         },

@@ -148,6 +148,24 @@ test('serves the embedded importer and authenticates preview/create requests', a
     },
     fetchImpl: remoteFetch,
     shopifyClient: {
+      getProductMetadataSuggestions: async ({ title, sku }) => {
+        assert.equal(title, sourceData.productName);
+        assert.equal(sku, '711385');
+        return {
+          similarProductCount: 2,
+          similarProducts: [{ title: 'One Piece Starter Deck', vendor: 'Bandai' }],
+          vendors: [{ value: 'Bandai', count: 2 }],
+          categories: [{
+            id: 'gid://shopify/TaxonomyCategory/aa-1-2',
+            name: 'Trading Cards',
+            fullName: 'Toys & Games > Games > Trading Cards',
+            count: 2,
+          }],
+          productTypes: [{ value: 'Trading Card Game', count: 2 }],
+          templates: [{ value: '', label: 'Default product', count: 2 }],
+          tags: [{ value: 'One Piece', count: 2 }],
+        };
+      },
       createDraftProduct: async input => {
         created = input;
         return {
@@ -170,6 +188,10 @@ test('serves the embedded importer and authenticates preview/create requests', a
   assert.equal(appHomeResponse.status, 200);
   const appHome = await appHomeResponse.text();
   assert.match(appHome, /id="lookup-form"/);
+  assert.match(appHome, /id="product-vendor"/);
+  assert.match(appHome, /id="product-category"/);
+  assert.match(appHome, /id="product-type"/);
+  assert.match(appHome, /id="product-template"/);
   assert.match(appHome, /src="\/app\.js"/);
 
   const appScriptResponse = await fetch(`${baseUrl}/app.js`);
@@ -197,6 +219,12 @@ test('serves the embedded importer and authenticates preview/create requests', a
   const preview = (await previewResponse.json()).product;
   assert.equal(preview.sku, '711385');
   assert.equal(preview.price, '266.00');
+  assert.equal(preview.vendor, 'Bandai');
+  assert.equal(preview.categoryId, 'gid://shopify/TaxonomyCategory/aa-1-2');
+  assert.equal(preview.productType, 'Trading Card Game');
+  assert.equal(preview.templateSuffix, '');
+  assert.deepEqual(preview.tags, []);
+  assert.equal(preview.catalogSuggestions.similarProductCount, 2);
   assert.match(preview.imagePreviewDataUrl, /^data:image\/jpeg;base64,/);
   assert.deepEqual(preview.imageDimensions, { width: 1000, height: 1000 });
 
@@ -212,6 +240,11 @@ test('serves the embedded importer and authenticates preview/create requests', a
       sku: '711385',
       price: '266.73',
       descriptionHtml: '<p>Edited description</p><script>unsafe()</script>',
+      vendor: 'Bandai',
+      categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
+      productType: 'Trading Card Game',
+      templateSuffix: 'card-game',
+      tags: 'One Piece, Booster Box',
     }),
   });
   assert.equal(createResponse.status, 201);
@@ -221,6 +254,11 @@ test('serves the embedded importer and authenticates preview/create requests', a
   assert.equal(created.sku, '711385');
   assert.equal(created.price, '266.00');
   assert.equal(created.descriptionHtml, '<p>Edited description</p>');
+  assert.equal(created.vendor, 'Bandai');
+  assert.equal(created.categoryId, 'gid://shopify/TaxonomyCategory/aa-1-2');
+  assert.equal(created.productType, 'Trading Card Game');
+  assert.equal(created.templateSuffix, 'card-game');
+  assert.deepEqual(created.tags, ['One Piece', 'Booster Box']);
   assert.deepEqual(await sharp(created.image.buffer).metadata().then(({ width, height }) => ({ width, height })), {
     width: 1000,
     height: 1000,

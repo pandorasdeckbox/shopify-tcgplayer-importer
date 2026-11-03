@@ -103,17 +103,43 @@ test('normalizes and validates fields again before product creation', () => {
     sku: '711385',
     price: '266.73',
     descriptionHtml: '<p>Description</p><script>unsafe()</script>',
+    vendor: ' Bandai ',
+    categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
+    productType: ' Trading Card Game ',
+    templateSuffix: ' card-game ',
+    tags: 'One Piece, Booster Box, one piece',
   });
   assert.equal(fields.title, 'Edited title');
   assert.equal(fields.sku, '711385');
   assert.equal(fields.price, '266.00');
   assert.equal(fields.descriptionHtml, '<p>Description</p>');
   assert.equal(fields.sourceProductId, '711385');
+  assert.equal(fields.vendor, 'Bandai');
+  assert.equal(fields.categoryId, 'gid://shopify/TaxonomyCategory/aa-1-2');
+  assert.equal(fields.productType, 'Trading Card Game');
+  assert.equal(fields.templateSuffix, 'card-game');
+  assert.deepEqual(fields.tags, ['One Piece', 'Booster Box']);
   assert.throws(() => normalizeDraftFields({
     sourceUrl: 'https://www.tcgplayer.com/product/711385/',
     title: 'Edited title',
     sku: '711385',
     price: '266.00',
     descriptionHtml: '<script>unsafe()</script>',
+  }), TcgplayerInputError);
+  assert.throws(() => normalizeDraftFields({
+    sourceUrl: 'https://www.tcgplayer.com/product/711385/',
+    title: 'Edited title',
+    sku: '711385',
+    price: '266.00',
+    descriptionHtml: '<p>Description</p>',
+    categoryId: 'gid://shopify/Product/9001',
+  }), TcgplayerInputError);
+  assert.throws(() => normalizeDraftFields({
+    sourceUrl: 'https://www.tcgplayer.com/product/711385/',
+    title: 'Edited title',
+    sku: '711385',
+    price: '266.00',
+    descriptionHtml: '<p>Description</p>',
+    tags: 42,
   }), TcgplayerInputError);
 });
