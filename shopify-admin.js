@@ -50,6 +50,18 @@ function productTitleTokens(title) {
   )))];
 }
 
+function productCatalogSearchTerms(title, productLineName, setName) {
+  return [...new Set([
+    ...productTitleTokens(productLineName),
+    ...productTitleTokens(setName),
+    ...productTitleTokens(title),
+  ])].slice(0, 12);
+}
+
+function countMatchingTerms(terms, productTerms) {
+  return terms.filter(term => productTerms.has(term)).length;
+}
+
 function countSuggestions(products, valueForProduct) {
   const counts = new Map();
   for (const product of products) {
@@ -112,9 +124,11 @@ function countTemplateSuggestions(products) {
     .slice(0, 8);
 }
 
-function buildProductMetadataSuggestions(products, title, sourceSku) {
+function buildProductMetadataSuggestions(products, title, sourceSku, { productLineName, setName } = {}) {
   const titleTerms = productTitleTokens(title);
-  if (!titleTerms.length) {
+  const productLineTerms = productTitleTokens(productLineName);
+  const setTerms = productTitleTokens(setName);
+  if (!titleTerms.length && !productLineTerms.length && !setTerms.length) {
     return {
       similarProductCount: 0,
       similarProducts: [],
@@ -126,15 +140,28 @@ function buildProductMetadataSuggestions(products, title, sourceSku) {
     };
   }
 
-  const minimumMatches = Math.min(2, titleTerms.length);
+  const hasEnoughMatches = (terms, matchCount) => (
+    terms.length > 0 && matchCount >= Math.min(2, terms.length)
+  );
   const similarProducts = products
     .filter(product => !sourceSku || !product.variants?.nodes?.some(variant => variant.sku === sourceSku))
     .map(product => {
       const productTerms = new Set(productTitleTokens(product.title));
-      const matchCount = titleTerms.filter(term => productTerms.has(term)).length;
-      return { ...product, matchCount };
+      const titleMatchCount = countMatchingTerms(titleTerms, productTerms);
+      const productLineMatchCount = countMatchingTerms(productLineTerms, productTerms);
+      const setMatchCount = countMatchingTerms(setTerms, productTerms);
+      const matchesTitle = hasEnoughMatches(titleTerms, titleMatchCount);
+      const matchesProductLine = hasEnoughMatches(productLineTerms, productLineMatchCount);
+      const matchesSet = hasEnoughMatches(setTerms, setMatchCount);
+      return {
+        ...product,
+        matchesTitle,
+        matchesProductLine,
+        matchesSet,
+        matchCount: titleMatchCount + productLineMatchCount * 2 + setMatchCount,
+      };
     })
-    .filter(product => product.matchCount >= minimumMatches)
+    .filter(product => product.matchesTitle || product.matchesProductLine || product.matchesSet)
     .sort((left, right) => right.matchCount - left.matchCount);
   const categories = new Map();
   for (const product of similarProducts) {
@@ -225,10 +252,11 @@ export class ShopifyAdminClient {
     return payload.data;
   }
 
-  async getProductMetadataSuggestions({ session, title, sku }) {
-    const titleTerms = productTitleTokens(title).slice(0, 8);
-    if (!titleTerms.length) {
-      return buildProductMetadataSuggestions([], title, sku);
+  async getProductMetadataSuggestions({ session, title, sku, productLineName, setName }) {
+    const searchTerms = productCatalogSearchTerms(title, productLineName, setName);
+    const matchContext = { productLineName, setName };
+    if (!searchTerms.length) {
+      return buildProductMetadataSuggestions([], title, sku, matchContext);
     }
 
     const data = await this.graphql({
@@ -247,14 +275,14 @@ export class ShopifyAdminClient {
         }
       }`,
       variables: {
-        search: titleTerms.map(term => `title:${term}`).join(' OR '),
+        search: searchTerms.map(term => `title:${term}`).join(' OR '),
       },
     });
     const products = data.products?.nodes;
     if (!Array.isArray(products)) {
       throw new ShopifyAdminError('Shopify did not return product catalog suggestions');
     }
-    return buildProductMetadataSuggestions(products, title, sku);
+    return buildProductMetadataSuggestions(products, title, sku, matchContext);
   }
 
   async uploadProductImage({ session, image }) {

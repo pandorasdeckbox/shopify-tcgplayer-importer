@@ -11,10 +11,11 @@ product image. The URL's numeric product ID is the default variant SKU. Market
 Price is floored to whole USD dollars. Inventory is not changed. The image is
 contained within 880 × 880 pixels on a 1000 × 1000 white canvas.
 
-The preview also finds similarly titled products in the current Shopify
-catalog and suggests the most common vendor, category, product type, theme
-template, and tags. Vendor, category, product type, and theme template are
-prefilled from those matches but remain editable; suggested tags can be added
+The preview finds similar products in the current Shopify catalog using both
+the product title and TCGplayer's game and set breadcrumb data when available.
+It suggests the most common vendor, category, product type, theme template,
+and tags. Vendor, category, product type, and theme template are prefilled
+from those matches but remain editable; suggested tags can be added
 individually.
 
 The source-page HTML can challenge automated clients, so the import pipeline

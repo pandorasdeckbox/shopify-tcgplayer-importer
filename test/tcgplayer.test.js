@@ -14,6 +14,8 @@ import {
 const sampleProduct = {
   productId: 711385,
   productName: 'Extra Booster: One Piece Heroines Edition Vol.2 - Booster Box',
+  productLineName: 'One Piece Card Game',
+  setName: 'Heroines Edition Vol.2',
   marketPrice: 266.73,
   customAttributes: {
     description: 'Product Details<br><br>The second Extra Booster.<br><strong>Set Breakdown</strong>',
@@ -74,6 +76,8 @@ test('fetches current TCGplayer details and returns editable product fields', as
   assert.equal(product.sourceProductId, '711385');
   assert.equal(product.sku, '711385');
   assert.equal(product.title, sampleProduct.productName);
+  assert.equal(product.productLineName, sampleProduct.productLineName);
+  assert.equal(product.setName, sampleProduct.setName);
   assert.equal(product.price, '266.00');
   assert.match(product.descriptionHtml, /<strong>Set Breakdown<\/strong>/);
   assert.equal(product.imageUrl, 'https://tcgplayer-cdn.tcgplayer.com/product/711385_in_1000x1000.jpg');

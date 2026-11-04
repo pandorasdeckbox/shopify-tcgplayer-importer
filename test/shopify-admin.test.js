@@ -227,6 +227,87 @@ test('suggests metadata from matching Shopify catalog products', async () => {
   );
 });
 
+test('matches catalog products using TCGplayer product-line and set breadcrumb context', async () => {
+  const requests = [];
+  const client = new ShopifyAdminClient({
+    fetchImpl: async (url, options) => {
+      requests.push({ url, options });
+      return response({
+        data: {
+          products: {
+            nodes: [
+              {
+                title: "The World's Strongest Warriors Booster Box",
+                vendor: 'Wrong default vendor',
+                productType: 'Uncategorized',
+                category: null,
+                tags: [],
+                variants: { nodes: [{ sku: '704752' }] },
+              },
+              {
+                title: 'One Piece Heroines Edition Booster Box',
+                vendor: 'Bandai',
+                productType: 'Trading Card Game',
+                templateSuffix: '',
+                category: {
+                  id: 'gid://shopify/TaxonomyCategory/aa-1-2',
+                  name: 'Trading Cards',
+                  fullName: 'Toys & Games > Games > Trading Cards',
+                },
+                tags: ['One Piece', 'Booster Box'],
+                variants: { nodes: [{ sku: '711385' }] },
+              },
+              {
+                title: 'One Piece Heroines Edition Booster Pack',
+                vendor: 'Bandai',
+                productType: 'Trading Card Game',
+                templateSuffix: '',
+                category: {
+                  id: 'gid://shopify/TaxonomyCategory/aa-1-2',
+                  name: 'Trading Cards',
+                  fullName: 'Toys & Games > Games > Trading Cards',
+                },
+                tags: ['One Piece', 'Booster Pack'],
+                variants: { nodes: [{ sku: '711386' }] },
+              },
+              {
+                title: 'Pokemon Booster Box',
+                vendor: 'Pokemon',
+                productType: 'Cards',
+                category: null,
+                tags: ['Pokemon'],
+                variants: { nodes: [{ sku: 'PK01' }] },
+              },
+            ],
+          },
+        },
+      });
+    },
+  });
+
+  const suggestions = await client.getProductMetadataSuggestions({
+    session,
+    title: "The World's Strongest Warriors Booster Box",
+    sku: '704752',
+    productLineName: 'One Piece Card Game',
+    setName: "The World's Strongest Warriors",
+  });
+
+  assert.equal(suggestions.similarProductCount, 2);
+  assert.deepEqual(suggestions.vendors, [{ value: 'Bandai', count: 2 }]);
+  assert.deepEqual(suggestions.productTypes, [{ value: 'Trading Card Game', count: 2 }]);
+  assert.deepEqual(suggestions.similarProducts.map(product => product.title), [
+    'One Piece Heroines Edition Booster Box',
+    'One Piece Heroines Edition Booster Pack',
+  ]);
+
+  const body = JSON.parse(requests[0].options.body);
+  assert.equal(
+    body.variables.search,
+    'title:one OR title:piece OR title:world OR title:strongest OR title:warriors',
+  );
+});
+
 test('deletes a newly created product if its variant cannot be updated', async () => {
   const requests = [];
   const fetchImpl = async (url, options) => {

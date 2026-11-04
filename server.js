@@ -214,6 +214,8 @@ export function createApp({
           session: req.shopifySession,
           title: product.title,
           sku: product.sku,
+          productLineName: product.productLineName,
+          setName: product.setName,
         }),
       ]);
       return res.json({

@@ -116,6 +116,8 @@ test('serves the embedded importer and authenticates preview/create requests', a
   const sourceData = {
     productId: 711385,
     productName: 'Extra Booster: One Piece Heroines Edition Vol.2 - Booster Box',
+    productLineName: 'One Piece Card Game',
+    setName: 'Heroines Edition Vol.2',
     marketPrice: 266.73,
     customAttributes: {
       description: 'Product Details<br><strong>Set Breakdown</strong>',
@@ -148,9 +150,11 @@ test('serves the embedded importer and authenticates preview/create requests', a
     },
     fetchImpl: remoteFetch,
     shopifyClient: {
-      getProductMetadataSuggestions: async ({ title, sku }) => {
+      getProductMetadataSuggestions: async ({ title, sku, productLineName, setName }) => {
         assert.equal(title, sourceData.productName);
         assert.equal(sku, '711385');
+        assert.equal(productLineName, sourceData.productLineName);
+        assert.equal(setName, sourceData.setName);
         return {
           similarProductCount: 2,
           similarProducts: [{ title: 'One Piece Starter Deck', vendor: 'Bandai' }],
