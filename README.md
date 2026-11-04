@@ -84,7 +84,10 @@ Dashboard if the domain changes. Then run `npm run shopify:deploy`.
 
 The app subscribes to `app/uninstalled` and Shopify's three mandatory privacy
 compliance topics. It stores only the shop domain and OAuth tokens, not
-customer records. Before App Store review, complete the Partner listing,
+customer records. Webhook handlers accept the root paths and the `/app`
+application-URL-prefixed paths, verify `X-Shopify-Hmac-Sha256` against the raw
+request body, and return `401` for invalid signatures. Before App Store review,
+complete the Partner listing,
 privacy policy, support/emergency contact information, automated checks, and
 Shopify review submission. The app's use of TCGplayer product descriptions
 and artwork should be disclosed and supported by appropriate permissions.

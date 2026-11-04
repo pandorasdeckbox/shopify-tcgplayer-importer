@@ -3,9 +3,13 @@ import { render } from 'preact';
 import { useState } from 'preact/hooks';
 
 async function postJson(path, body) {
+  const token = await shopify.auth.idToken();
   const response = await fetch(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
   });
 

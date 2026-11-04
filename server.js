@@ -254,7 +254,7 @@ export function createApp({
     }
   });
 
-  app.post('/webhooks/app/uninstalled', async (req, res, next) => {
+  app.post(['/webhooks/app/uninstalled', '/app/webhooks/app/uninstalled'], async (req, res, next) => {
     if (!verifyWebhookHmac(req.rawBody, config.shopifyApiSecret, req.get('x-shopify-hmac-sha256'))) {
       return res.status(401).send('Invalid webhook signature');
     }
@@ -268,7 +268,7 @@ export function createApp({
     }
   });
 
-  app.post('/webhooks/compliance', async (req, res, next) => {
+  app.post(['/webhooks/compliance', '/app/webhooks/compliance'], async (req, res, next) => {
     if (!verifyWebhookHmac(req.rawBody, config.shopifyApiSecret, req.get('x-shopify-hmac-sha256'))) {
       return res.status(401).send('Invalid webhook signature');
     }

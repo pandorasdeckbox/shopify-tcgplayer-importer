@@ -292,7 +292,7 @@ test('verifies Shopify webhooks and removes shop credentials on uninstall', asyn
   const body = Buffer.from('{}');
   const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('base64');
 
-  const response = await fetch(`${baseUrl}/webhooks/app/uninstalled`, {
+  const response = await fetch(`${baseUrl}/app/webhooks/app/uninstalled`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -304,14 +304,27 @@ test('verifies Shopify webhooks and removes shop credentials on uninstall', asyn
   assert.equal(response.status, 200);
   assert.equal(await db.loadShopifySession(shop), null);
 
-  const invalid = await fetch(`${baseUrl}/webhooks/compliance`, {
+  const wrongSignature = crypto.createHmac('sha256', 'incorrect-secret').update(body).digest('base64');
+  const invalid = await fetch(`${baseUrl}/app/webhooks/compliance`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Shopify-Hmac-Sha256': 'invalid',
+      'X-Shopify-Hmac-Sha256': wrongSignature,
       'X-Shopify-Topic': 'customers/data_request',
     },
     body,
   });
   assert.equal(invalid.status, 401);
+
+  const validSignature = crypto.createHmac('sha256', apiSecret).update(body).digest('base64');
+  const valid = await fetch(`${baseUrl}/app/webhooks/compliance`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Hmac-Sha256': validSignature,
+      'X-Shopify-Topic': 'customers/data_request',
+    },
+    body,
+  });
+  assert.equal(valid.status, 200);
 });
