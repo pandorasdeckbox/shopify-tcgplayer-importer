@@ -354,9 +354,7 @@ export class ShopifyAdminClient {
       query: `mutation ActivateImportedInventoryAtZero($inventoryItemId: ID!, $locationId: ID!, $idempotencyKey: String!) {
         inventoryActivate(
           inventoryItemId: $inventoryItemId,
-          locationId: $locationId,
-          available: 0,
-          onHand: 0
+          locationId: $locationId
         ) @idempotent(key: $idempotencyKey) {
           inventoryLevel {
             id

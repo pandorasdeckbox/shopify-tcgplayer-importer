@@ -198,8 +198,8 @@ test('creates a Draft product with its suggested sales channels', async () => {
     const body = JSON.parse(request.options.body);
     assert.equal(body.variables.inventoryItemId, 'gid://shopify/InventoryItem/9003');
     assert.match(body.variables.idempotencyKey, /^[0-9a-f-]{36}$/);
-    assert.match(body.query, /available:\s*0/);
-    assert.match(body.query, /onHand:\s*0/);
+    assert.doesNotMatch(body.query, /\bavailable\s*:/);
+    assert.doesNotMatch(body.query, /\bonHand\s*:/);
     assert.match(body.query, /@idempotent\(key:\s*\$idempotencyKey\)/);
   }
 
