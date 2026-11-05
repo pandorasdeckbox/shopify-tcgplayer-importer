@@ -93,6 +93,37 @@ test('exchanges the OAuth code for expiring offline tokens', async t => {
   assert.equal(session.refreshToken, 'offline-refresh-token');
 });
 
+test('uses App Bridge to start OAuth from an unauthenticated embedded app load', async t => {
+  const db = await new AppDatabase({ sqlitePath: ':memory:' }).init();
+  t.after(() => db.close());
+  const app = createApp({
+    db,
+    config: {
+      shopifyApiKey: apiKey,
+      shopifyApiSecret: apiSecret,
+      shopifyApiVersion: '2026-10',
+      appUrl: 'https://importer.example.com',
+      isProduction: false,
+    },
+    fetchImpl: async () => {
+      throw new Error('No external request expected');
+    },
+    logger: { error() {} },
+  });
+  const baseUrl = await withRunningApp(t, app);
+
+  const response = await fetch(`${baseUrl}/app?shop=${shop}&host=embedded-host`);
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /<meta name="shopify-api-key" content="test-client-id">/);
+  assert.match(html, /https:\/\/cdn\.shopify\.com\/shopifycloud\/app-bridge\.js/);
+  assert.match(
+    html,
+    /window\.open\("https:\/\/importer\.example\.com\/auth\?shop=example-store\.myshopify\.com", '_top'\)/,
+  );
+  assert.doesNotMatch(html, /window\.top\.location\.href/);
+});
+
 test('serves the embedded importer and authenticates preview/create requests', async t => {
   const db = await new AppDatabase({ sqlitePath: ':memory:' }).init();
   t.after(() => db.close());

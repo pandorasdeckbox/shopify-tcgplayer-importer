@@ -193,7 +193,7 @@ export function createApp({
       if (!session || !hasRequiredScopes(session.scope)) {
         const authUrl = `${config.appUrl}/auth?shop=${encodeURIComponent(shop)}`;
         return res.type('html').send(
-          `<!doctype html><html><body><script>window.top.location.href=${JSON.stringify(authUrl)};</script></body></html>`,
+          `<!doctype html><html><head><meta name="shopify-api-key" content="${config.shopifyApiKey || ''}"><script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script></head><body><script>window.open(${JSON.stringify(authUrl)}, '_top');</script></body></html>`,
         );
       }
       return res.type('html').send(APP_SHELL.replaceAll('%SHOPIFY_API_KEY%', config.shopifyApiKey || ''));

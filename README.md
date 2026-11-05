@@ -58,7 +58,10 @@ app or reusing its product content.
 The OAuth callback is `${APP_URL}/auth/callback`. The product action calls the
 same app origin using Shopify's signed OpenID Connect ID token; the backend
 validates the token and refreshes the store's expiring offline access token
-before calling Shopify.
+before calling Shopify. If the app has no saved session after install or
+reinstall, its bootstrap page loads App Bridge and starts OAuth with a
+top-level navigation rather than assigning `window.top.location` inside the
+sandboxed iframe.
 
 ## Tests and checks
 
