@@ -7,6 +7,7 @@ import {
   AuthenticationError,
   createOAuthState,
   createShopifyAuth,
+  getMissingScopes,
   hasRequiredScopes,
   sanitizeShop,
   verifyOAuthHmac,
@@ -36,6 +37,8 @@ test('sanitizes Shopify shop domains and requires product, inventory, and public
   assert.equal(sanitizeShop(' Example-Store.myshopify.com '), 'example-store.myshopify.com');
   assert.equal(sanitizeShop('https://example-store.myshopify.com'), null);
   assert.equal(sanitizeShop('evil.example.com'), null);
+  assert.deepEqual(getMissingScopes('read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications'), []);
+  assert.deepEqual(getMissingScopes('read_products,write_products,read_locations,read_inventory,write_inventory,write_publications'), ['read_publications']);
   assert.equal(hasRequiredScopes('read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications'), true);
   assert.equal(hasRequiredScopes('read_products,write_products,read_inventory,write_inventory,read_publications,write_publications'), false);
   assert.equal(hasRequiredScopes('read_products,write_products,read_locations,write_inventory,read_publications,write_publications'), false);

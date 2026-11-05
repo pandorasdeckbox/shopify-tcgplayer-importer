@@ -28,6 +28,11 @@ export function sanitizeShop(value) {
   return /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop) ? shop : null;
 }
 
+export function getMissingScopes(scope) {
+  const granted = new Set(String(scope || '').split(',').map(value => value.trim()).filter(Boolean));
+  return REQUIRED_SCOPES.filter(required => !granted.has(required));
+}
+
 export function createOAuthState() {
   return crypto.randomBytes(32).toString('base64url');
 }
@@ -50,8 +55,7 @@ export function verifyOAuthHmac(params, secret) {
 }
 
 export function hasRequiredScopes(scope) {
-  const granted = new Set(String(scope || '').split(',').map(value => value.trim()).filter(Boolean));
-  return REQUIRED_SCOPES.every(required => granted.has(required));
+  return getMissingScopes(scope).length === 0;
 }
 
 export async function verifyShopifyIdToken(token, config, now = Date.now()) {

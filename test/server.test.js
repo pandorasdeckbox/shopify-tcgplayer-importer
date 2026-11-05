@@ -94,6 +94,56 @@ test('exchanges the OAuth code for expiring offline tokens', async t => {
   assert.equal(session.refreshToken, 'offline-refresh-token');
 });
 
+test('reports the exact scopes missing from Shopify OAuth grant', async t => {
+  const db = await new AppDatabase({ sqlitePath: ':memory:' }).init();
+  t.after(() => db.close());
+  const grantedScopes = scopes.split(',').filter(scope => scope !== 'read_publications').join(',');
+  const app = createApp({
+    db,
+    config: {
+      shopifyApiKey: apiKey,
+      shopifyApiSecret: apiSecret,
+      appUrl: 'https://importer.example.com',
+      isProduction: false,
+    },
+    fetchImpl: async () => new Response(JSON.stringify({
+      access_token: 'offline-access-token',
+      refresh_token: 'offline-refresh-token',
+      scope: grantedScopes,
+      expires_in: 3600,
+      refresh_token_expires_in: 7776000,
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    }),
+    logger: { error() {} },
+  });
+  const baseUrl = await withRunningApp(t, app);
+  const authorizationResponse = await fetch(`${baseUrl}/auth?shop=${shop}`, {
+    redirect: 'manual',
+  });
+  const authorizationUrl = new URL(authorizationResponse.headers.get('location'));
+  const params = new URLSearchParams({
+    code: 'authorization-code',
+    shop,
+    state: authorizationUrl.searchParams.get('state'),
+    timestamp: String(Math.floor(Date.now() / 1000)),
+  });
+  const message = [...params.entries()]
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('&');
+  params.set('hmac', crypto.createHmac('sha256', apiSecret).update(message).digest('hex'));
+
+  const callbackResponse = await fetch(`${baseUrl}/auth/callback?${params}`, {
+    redirect: 'manual',
+  });
+
+  assert.equal(callbackResponse.status, 403);
+  assert.match(await callbackResponse.text(), /Missing: read_publications/);
+  assert.equal(await db.loadShopifySession(shop), null);
+});
+
 test('uses App Bridge to start OAuth from an unauthenticated embedded app load', async t => {
   const db = await new AppDatabase({ sqlitePath: ':memory:' }).init();
   t.after(() => db.close());

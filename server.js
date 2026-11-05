@@ -9,7 +9,7 @@ import {
   AuthenticationError,
   createOAuthState,
   createShopifyAuth,
-  hasRequiredScopes,
+  getMissingScopes,
   sanitizeShop,
   ShopifyTokenError,
   verifyOAuthHmac,
@@ -149,8 +149,9 @@ export function createApp({
       } catch {
         throw new ShopifyTokenError('Shopify returned an unreadable token response');
       }
-      if (!hasRequiredScopes(tokenData.scope)) {
-        return res.status(403).send('Shopify did not grant the required access scopes');
+      const missingScopes = getMissingScopes(tokenData.scope);
+      if (missingScopes.length > 0) {
+        return res.status(403).send(`Shopify did not grant the required access scopes. Missing: ${missingScopes.join(',')}`);
       }
 
       const expiresIn = Number(tokenData.expires_in);
