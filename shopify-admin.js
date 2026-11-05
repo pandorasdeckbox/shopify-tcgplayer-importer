@@ -515,6 +515,7 @@ export class ShopifyAdminClient {
     price,
     cost = '',
     barcode = '',
+    barcodeType = null,
     vendor = '',
     categoryId = '',
     productType = '',
@@ -606,7 +607,7 @@ export class ShopifyAdminClient {
               tracked: true,
               ...(cost ? { cost } : {}),
             },
-            ...(barcode ? { barcodes: [{ value: barcode }] } : {}),
+            ...(barcode ? { barcodes: [{ value: barcode, type: barcodeType }] } : {}),
           }],
         },
       });

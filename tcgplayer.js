@@ -173,6 +173,34 @@ function normalizeOptionalMetadataText(value, label) {
   return normalized;
 }
 
+function hasValidGtinCheckDigit(value) {
+  if (!/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(value)) return false;
+  let sum = 0;
+  let weight = 3;
+  for (let index = value.length - 2; index >= 0; index -= 1) {
+    sum += Number(value[index]) * weight;
+    weight = weight === 3 ? 1 : 3;
+  }
+  return (10 - (sum % 10)) % 10 === Number(value.at(-1));
+}
+
+function isValidIsbn10(value) {
+  if (!/^\d{9}[\dX]$/i.test(value)) return false;
+  const checksum = [...value.toUpperCase()].reduce(
+    (sum, character, index) => sum + (character === 'X' ? 10 : Number(character)) * (10 - index),
+    0,
+  );
+  return checksum % 11 === 0;
+}
+
+export function detectBarcodeType(value) {
+  if (typeof value !== 'string') return null;
+  if (isValidIsbn10(value)) return 'ISBN';
+  if (/^(?:978|979)\d{10}$/.test(value) && hasValidGtinCheckDigit(value)) return 'ISBN';
+  if (hasValidGtinCheckDigit(value)) return 'GTIN';
+  return null;
+}
+
 function normalizeOptionalCost(value) {
   if (value === undefined || value === null) return '';
   if (typeof value !== 'string') throw new TcgplayerInputError('Cost per item must be text');
@@ -248,6 +276,7 @@ export function normalizeDraftFields(fields) {
   const price = floorPriceToDollars(fields?.price);
   const cost = normalizeOptionalCost(fields?.cost);
   const barcode = normalizeOptionalMetadataText(fields?.barcode, 'UPC / GTIN / Barcode');
+  const barcodeType = detectBarcodeType(barcode);
   const vendor = normalizeOptionalMetadataText(fields?.vendor, 'Vendor');
   const productType = normalizeOptionalMetadataText(fields?.productType, 'Product type');
   const categoryId = normalizeOptionalMetadataText(fields?.categoryId, 'Product category');
@@ -279,6 +308,7 @@ export function normalizeDraftFields(fields) {
     price,
     cost,
     barcode,
+    barcodeType,
     vendor,
     categoryId,
     productType,

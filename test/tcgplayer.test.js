@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   cleanTcgplayerTitle,
+  detectBarcodeType,
   extractTcgplayerProductId,
   fetchTcgplayerProduct,
   floorPriceToDollars,
@@ -100,6 +101,16 @@ test('reports source errors instead of returning incomplete product data', async
   );
 });
 
+test('detects validated GTIN and ISBN barcode formats without guessing unknown formats', () => {
+  assert.equal(detectBarcodeType('0196214165854'), 'GTIN');
+  assert.equal(detectBarcodeType('012345678905'), 'GTIN');
+  assert.equal(detectBarcodeType('96385074'), 'GTIN');
+  assert.equal(detectBarcodeType('9780262033848'), 'ISBN');
+  assert.equal(detectBarcodeType('0262033844'), 'ISBN');
+  assert.equal(detectBarcodeType('0001234567890'), null);
+  assert.equal(detectBarcodeType('B00ABC1234'), null);
+});
+
 test('normalizes and validates fields again before product creation', () => {
   const fields = normalizeDraftFields({
     sourceUrl: 'https://www.tcgplayer.com/product/711385/',
@@ -107,7 +118,7 @@ test('normalizes and validates fields again before product creation', () => {
     sku: '711385',
     price: '266.73',
     cost: '$1,234.5',
-    barcode: ' 0001234567890 ',
+    barcode: ' 0196214165854 ',
     descriptionHtml: '<p>Description</p><script>unsafe()</script>',
     vendor: ' Bandai ',
     categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
@@ -120,7 +131,8 @@ test('normalizes and validates fields again before product creation', () => {
   assert.equal(fields.sku, '711385');
   assert.equal(fields.price, '266.00');
   assert.equal(fields.cost, '1234.50');
-  assert.equal(fields.barcode, '0001234567890');
+  assert.equal(fields.barcode, '0196214165854');
+  assert.equal(fields.barcodeType, 'GTIN');
   assert.equal(fields.descriptionHtml, '<p>Description</p>');
   assert.equal(fields.sourceProductId, '711385');
   assert.equal(fields.vendor, 'Bandai');

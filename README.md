@@ -12,6 +12,8 @@ Price is floored to whole USD dollars. Staff can optionally enter the
 recommended per-item cost and UPC/GTIN/barcode; cost is stored for profit
 reporting, while barcodes help Google identify products. New products track
 inventory with zero available at all active locations and overselling disabled.
+Valid GTIN-format numeric barcodes are saved as GTIN, and recognizable ISBNs as ISBN.
+Other values remain untyped rather than guessing between source-assigned types.
 The image is contained within 880 × 880 pixels on a 1000 × 1000 white canvas.
 
 The preview finds similar products in the current Shopify catalog using both

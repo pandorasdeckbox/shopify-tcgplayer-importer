@@ -142,7 +142,8 @@ test('creates a Draft product with its suggested sales channels', async () => {
     sku: '711385',
     price: '266.00',
     cost: '12.75',
-    barcode: '0001234567890',
+    barcode: '0196214165854',
+    barcodeType: 'GTIN',
     vendor: 'Bandai',
     categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
     productType: 'Trading Card Game',
@@ -182,7 +183,7 @@ test('creates a Draft product with its suggested sales channels', async () => {
     price: '266.00',
     inventoryPolicy: 'DENY',
     inventoryItem: { sku: '711385', tracked: true, cost: '12.75' },
-    barcodes: [{ value: '0001234567890' }],
+    barcodes: [{ value: '0196214165854', type: 'GTIN' }],
   }]);
 
   const inventoryRequests = requests.filter(request => (
