@@ -197,6 +197,29 @@ function normalizeProductTags(value) {
   return tags;
 }
 
+function normalizePublicationIds(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 20) {
+    throw new TcgplayerInputError('Choose up to 20 suggested sales channels');
+  }
+
+  const ids = [];
+  const seen = new Set();
+  for (const publicationId of value) {
+    if (
+      typeof publicationId !== 'string'
+      || !/^gid:\/\/shopify\/Publication\/[1-9][0-9]*$/.test(publicationId)
+    ) {
+      throw new TcgplayerInputError('Choose sales channels from the Shopify suggestions');
+    }
+    if (!seen.has(publicationId)) {
+      seen.add(publicationId);
+      ids.push(publicationId);
+    }
+  }
+  return ids;
+}
+
 export function normalizeDraftFields(fields) {
   const sourceProductId = extractTcgplayerProductId(fields?.sourceUrl);
   const title = normalizedTitle(fields?.title);
@@ -208,6 +231,7 @@ export function normalizeDraftFields(fields) {
   const categoryId = normalizeOptionalMetadataText(fields?.categoryId, 'Product category');
   const templateSuffix = normalizeOptionalMetadataText(fields?.templateSuffix, 'Theme template');
   const tags = normalizeProductTags(fields?.tags);
+  const publicationIds = normalizePublicationIds(fields?.publicationIds);
 
   if (!title || title.length > 255) {
     throw new TcgplayerInputError('Title must be between 1 and 255 characters');
@@ -236,5 +260,6 @@ export function normalizeDraftFields(fields) {
     productType,
     templateSuffix,
     tags,
+    publicationIds,
   };
 }

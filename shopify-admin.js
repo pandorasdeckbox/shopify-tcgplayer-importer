@@ -36,6 +36,9 @@ const PRODUCT_TITLE_STOP_WORDS = new Set([
   'pack', 'product', 'series', 'set', 'starter', 'tcg', 'the', 'trading',
   'vol', 'volume', 'with',
 ]);
+const PUBLICATION_PRODUCT_LIMIT = 25;
+const PUBLICATIONS_PER_PRODUCT_LIMIT = 20;
+const PUBLICATION_SUGGESTION_LIMIT = 20;
 
 function productTitleTokens(title) {
   const words = String(title || '')
@@ -137,6 +140,7 @@ function buildProductMetadataSuggestions(products, title, sourceSku, { productLi
       productTypes: [],
       templates: [],
       tags: [],
+      matchingProductIds: [],
     };
   }
 
@@ -201,7 +205,54 @@ function buildProductMetadataSuggestions(products, title, sourceSku, { productLi
     productTypes: countSuggestions(similarProducts, product => product.productType),
     templates: countTemplateSuggestions(similarProducts),
     tags: countProductTags(similarProducts),
+    matchingProductIds: [...new Set(
+      similarProducts.map(product => product.id)
+        .filter(id => typeof id === 'string' && /^gid:\/\/shopify\/Product\/[1-9][0-9]*$/.test(id)),
+    )].slice(0, PUBLICATION_PRODUCT_LIMIT),
   };
+}
+
+function buildPublicationSuggestions(productIds, products) {
+  const productsById = new Map(
+    products.filter(product => typeof product?.id === 'string').map(product => [product.id, product]),
+  );
+  const counts = new Map();
+
+  for (const productId of productIds) {
+    const seen = new Set();
+    const publications = productsById.get(productId)?.resourcePublicationsV2?.nodes || [];
+    for (const item of publications) {
+      const publication = item?.publication;
+      if (
+        item?.isPublished !== true
+        || typeof publication?.id !== 'string'
+        || typeof publication?.catalog?.title !== 'string'
+        || !publication.catalog.title.trim()
+        || seen.has(publication.id)
+      ) {
+        continue;
+      }
+      seen.add(publication.id);
+      const existing = counts.get(publication.id);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        counts.set(publication.id, {
+          id: publication.id,
+          name: publication.catalog.title.trim(),
+          count: 1,
+        });
+      }
+    }
+  }
+
+  return [...counts.values()]
+    .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name))
+    .slice(0, PUBLICATION_SUGGESTION_LIMIT)
+    .map(publication => ({
+      ...publication,
+      suggested: productIds.length > 0 && publication.count * 2 >= productIds.length,
+    }));
 }
 
 export class ShopifyAdminClient {
@@ -256,7 +307,8 @@ export class ShopifyAdminClient {
     const searchTerms = productCatalogSearchTerms(title, productLineName, setName);
     const matchContext = { productLineName, setName };
     if (!searchTerms.length) {
-      return buildProductMetadataSuggestions([], title, sku, matchContext);
+      const { matchingProductIds, ...suggestions } = buildProductMetadataSuggestions([], title, sku, matchContext);
+      return { ...suggestions, publications: [] };
     }
 
     const data = await this.graphql({
@@ -264,6 +316,7 @@ export class ShopifyAdminClient {
       query: `query ProductMetadataSuggestions($search: String!) {
         products(first: 100, query: $search, sortKey: RELEVANCE) {
           nodes {
+            id
             title
             vendor
             productType
@@ -282,7 +335,33 @@ export class ShopifyAdminClient {
     if (!Array.isArray(products)) {
       throw new ShopifyAdminError('Shopify did not return product catalog suggestions');
     }
-    return buildProductMetadataSuggestions(products, title, sku, matchContext);
+    const { matchingProductIds, ...suggestions } = buildProductMetadataSuggestions(products, title, sku, matchContext);
+    if (!matchingProductIds.length) return { ...suggestions, publications: [] };
+
+    const publicationData = await this.graphql({
+      session,
+      query: `query ProductPublicationSuggestions($productIds: [ID!]!) {
+        nodes(ids: $productIds) {
+          ... on Product {
+            id
+            resourcePublicationsV2(first: ${PUBLICATIONS_PER_PRODUCT_LIMIT}) {
+              nodes {
+                publication { id catalog { title } }
+                isPublished
+              }
+            }
+          }
+        }
+      }`,
+      variables: { productIds: matchingProductIds },
+    });
+    if (!Array.isArray(publicationData.nodes)) {
+      throw new ShopifyAdminError('Shopify did not return product publishing details');
+    }
+    return {
+      ...suggestions,
+      publications: buildPublicationSuggestions(matchingProductIds, publicationData.nodes),
+    };
   }
 
   async uploadProductImage({ session, image }) {
@@ -366,6 +445,7 @@ export class ShopifyAdminClient {
     productType = '',
     templateSuffix = '',
     tags = [],
+    publicationIds = [],
     image,
   }) {
     const originalSource = await this.uploadProductImage({ session, image });
@@ -461,6 +541,43 @@ export class ShopifyAdminClient {
         );
       }
       throw error;
+    }
+
+    if (publicationIds.length) {
+      try {
+        const publicationData = await this.graphql({
+          session,
+          query: `mutation SelectDraftProductPublications($id: ID!, $input: [PublicationInput!]!) {
+            publishablePublish(id: $id, input: $input) {
+              publishable {
+                ... on Product { id status }
+              }
+              userErrors { field message }
+            }
+          }`,
+          variables: {
+            id: productId,
+            input: publicationIds.map(publicationId => ({ publicationId })),
+          },
+        });
+        const result = publicationData.publishablePublish;
+        if (result?.userErrors?.length || result?.publishable?.status !== 'DRAFT') {
+          throw new ShopifyAdminError(userErrorMessage(
+            result?.userErrors,
+            'Shopify did not keep the selected sales channels on a Draft product',
+          ));
+        }
+      } catch (error) {
+        try {
+          await this.deleteProduct({ session, productId });
+        } catch {
+          const adminId = numericProductId(productId);
+          throw new PartialProductCreationError(
+            `Shopify created a draft product ${adminId || productId}, but sales-channel assignment failed and automatic cleanup failed. Review it in Shopify Admin.`,
+          );
+        }
+        throw error;
+      }
     }
 
     const adminId = numericProductId(productId);

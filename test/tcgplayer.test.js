@@ -112,6 +112,7 @@ test('normalizes and validates fields again before product creation', () => {
     productType: ' Trading Card Game ',
     templateSuffix: ' card-game ',
     tags: 'One Piece, Booster Box, one piece',
+    publicationIds: ['gid://shopify/Publication/101', 'gid://shopify/Publication/101'],
   });
   assert.equal(fields.title, 'Edited title');
   assert.equal(fields.sku, '711385');
@@ -123,6 +124,7 @@ test('normalizes and validates fields again before product creation', () => {
   assert.equal(fields.productType, 'Trading Card Game');
   assert.equal(fields.templateSuffix, 'card-game');
   assert.deepEqual(fields.tags, ['One Piece', 'Booster Box']);
+  assert.deepEqual(fields.publicationIds, ['gid://shopify/Publication/101']);
   assert.throws(() => normalizeDraftFields({
     sourceUrl: 'https://www.tcgplayer.com/product/711385/',
     title: 'Edited title',
@@ -145,5 +147,13 @@ test('normalizes and validates fields again before product creation', () => {
     price: '266.00',
     descriptionHtml: '<p>Description</p>',
     tags: 42,
+  }), TcgplayerInputError);
+  assert.throws(() => normalizeDraftFields({
+    sourceUrl: 'https://www.tcgplayer.com/product/711385/',
+    title: 'Edited title',
+    sku: '711385',
+    price: '266.00',
+    descriptionHtml: '<p>Description</p>',
+    publicationIds: ['gid://shopify/Product/9001'],
   }), TcgplayerInputError);
 });

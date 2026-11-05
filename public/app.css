@@ -172,6 +172,36 @@ button:disabled {
   gap: 8px;
 }
 
+.publication-field {
+  margin-top: 16px;
+}
+
+.field-label {
+  font-weight: 600;
+}
+
+.publication-suggestions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px 16px;
+}
+
+.publication-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 400;
+}
+
+.publication-option input {
+  width: auto;
+  min-width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .tag-suggestions {
   display: flex;
   flex-wrap: wrap;

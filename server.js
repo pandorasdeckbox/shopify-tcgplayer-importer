@@ -92,7 +92,7 @@ export function createApp({
       const authorizationUrl = new URL(`https://${shop}/admin/oauth/authorize`);
       authorizationUrl.search = new URLSearchParams({
         client_id: config.shopifyApiKey,
-        scope: 'write_products',
+        scope: 'read_products,write_products,read_publications,write_publications',
         redirect_uri: `${config.appUrl}/auth/callback`,
         state,
       }).toString();
@@ -150,7 +150,7 @@ export function createApp({
         throw new ShopifyTokenError('Shopify returned an unreadable token response');
       }
       if (!hasRequiredScopes(tokenData.scope)) {
-        return res.status(403).send('Shopify did not grant the required write_products scope');
+        return res.status(403).send('Shopify did not grant the required access scopes');
       }
 
       const expiresIn = Number(tokenData.expires_in);
@@ -226,6 +226,9 @@ export function createApp({
           productType: catalogSuggestions.productTypes[0]?.value || '',
           templateSuffix: catalogSuggestions.templates[0]?.value || '',
           tags: [],
+          publicationIds: catalogSuggestions.publications
+            .filter(publication => publication.suggested)
+            .map(publication => publication.id),
           catalogSuggestions,
           imagePreviewDataUrl: `data:${image.mimeType};base64,${image.buffer.toString('base64')}`,
           imageDimensions: { width: image.width, height: image.height },

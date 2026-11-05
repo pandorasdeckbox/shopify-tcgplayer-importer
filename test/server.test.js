@@ -10,6 +10,7 @@ import { createApp } from '../server.js';
 const shop = 'example-store.myshopify.com';
 const apiKey = 'test-client-id';
 const apiSecret = 'test-client-secret';
+const scopes = 'read_products,write_products,read_publications,write_publications';
 
 async function createIdToken() {
   return new SignJWT({ dest: `https://${shop}` })
@@ -47,7 +48,7 @@ test('exchanges the OAuth code for expiring offline tokens', async t => {
       return new Response(JSON.stringify({
         access_token: 'offline-access-token',
         refresh_token: 'offline-refresh-token',
-        scope: 'write_products',
+        scope: scopes,
         expires_in: 3600,
         refresh_token_expires_in: 7776000,
       }), {
@@ -64,7 +65,7 @@ test('exchanges the OAuth code for expiring offline tokens', async t => {
   assert.equal(authorizationResponse.status, 302);
   const authorizationUrl = new URL(authorizationResponse.headers.get('location'));
   const state = authorizationUrl.searchParams.get('state');
-  assert.equal(authorizationUrl.searchParams.get('scope'), 'write_products');
+  assert.equal(authorizationUrl.searchParams.get('scope'), scopes);
   assert.equal(authorizationUrl.searchParams.has('expiring'), false);
 
   const params = new URLSearchParams({
@@ -130,7 +131,7 @@ test('serves the embedded importer and authenticates preview/create requests', a
   await db.storeShopifySession({
     shop,
     accessToken: 'offline-access-token',
-    scope: 'write_products',
+    scope: scopes,
     expiresAt: Date.now() + 60 * 60 * 1000,
     refreshToken: 'refresh-token',
     refreshTokenExpiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
@@ -199,6 +200,12 @@ test('serves the embedded importer and authenticates preview/create requests', a
           productTypes: [{ value: 'Trading Card Game', count: 2 }],
           templates: [{ value: '', label: 'Default product', count: 2 }],
           tags: [{ value: 'One Piece', count: 2 }],
+          publications: [{
+            id: 'gid://shopify/Publication/100',
+            name: 'Online Store',
+            count: 2,
+            suggested: true,
+          }],
         };
       },
       createDraftProduct: async input => {
@@ -260,6 +267,7 @@ test('serves the embedded importer and authenticates preview/create requests', a
   assert.equal(preview.templateSuffix, '');
   assert.deepEqual(preview.tags, []);
   assert.equal(preview.catalogSuggestions.similarProductCount, 2);
+  assert.deepEqual(preview.publicationIds, ['gid://shopify/Publication/100']);
   assert.match(preview.imagePreviewDataUrl, /^data:image\/jpeg;base64,/);
   assert.deepEqual(preview.imageDimensions, { width: 1000, height: 1000 });
 
@@ -280,6 +288,7 @@ test('serves the embedded importer and authenticates preview/create requests', a
       productType: 'Trading Card Game',
       templateSuffix: 'card-game',
       tags: 'One Piece, Booster Box',
+      publicationIds: preview.publicationIds,
     }),
   });
   assert.equal(createResponse.status, 201);
@@ -294,6 +303,7 @@ test('serves the embedded importer and authenticates preview/create requests', a
   assert.equal(created.productType, 'Trading Card Game');
   assert.equal(created.templateSuffix, 'card-game');
   assert.deepEqual(created.tags, ['One Piece', 'Booster Box']);
+  assert.deepEqual(created.publicationIds, ['gid://shopify/Publication/100']);
   assert.deepEqual(await sharp(created.image.buffer).metadata().then(({ width, height }) => ({ width, height })), {
     width: 1000,
     height: 1000,
@@ -306,7 +316,7 @@ test('verifies Shopify webhooks and removes shop credentials on uninstall', asyn
   await db.storeShopifySession({
     shop,
     accessToken: 'offline-access-token',
-    scope: 'write_products',
+    scope: scopes,
     expiresAt: Date.now() + 60 * 60 * 1000,
     refreshToken: 'refresh-token',
     refreshTokenExpiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,

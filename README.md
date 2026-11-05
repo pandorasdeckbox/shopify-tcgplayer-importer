@@ -14,9 +14,11 @@ contained within 880 × 880 pixels on a 1000 × 1000 white canvas.
 The preview finds similar products in the current Shopify catalog using both
 the product title and TCGplayer's game and set breadcrumb data when available.
 It suggests the most common vendor, category, product type, theme template,
-and tags. Vendor, category, product type, and theme template are prefilled
-from those matches but remain editable; suggested tags can be added
-individually.
+tags, and sales channels. Vendor, category, product type, and theme template
+are prefilled from those matches but remain editable; suggested tags and
+channels can be adjusted before creation. Channel selections are inherited from
+similar products, while the new product remains Draft and hidden from buyers
+until activated.
 
 The source-page HTML can challenge automated clients, so the import pipeline
 uses TCGplayer's product-details endpoint and product image CDN rather than
@@ -43,7 +45,8 @@ app or reusing its product content.
 2. Create an app in Shopify Dev Dashboard under your Partner organization. In
    the distribution card, choose **Public distribution** if this app is meant
    for App Store review. Shopify says this choice cannot be changed later.
-3. Configure the app's public URL, OAuth callback, `write_products` scope, and
+3. Configure the app's public URL, OAuth callback, `read_products`,
+   `write_products`, `read_publications`, and `write_publications` scopes, and
    the Admin action extension in the Dev Dashboard / Shopify CLI configuration.
    The production app URL must not contain the word `Shopify`.
 4. Copy `.env.example` to `.env` and set `SHOPIFY_API_KEY`,
@@ -53,7 +56,7 @@ app or reusing its product content.
 5. Run `npm run dev` for the web service. Use a public HTTPS tunnel for local
    development and set the matching `APP_URL` and OAuth callback URL.
 6. Run `npm run shopify:dev` to preview the app and extension on a development
-   store. The app must be installed with `write_products`.
+   store. The app must be installed with the product and publication scopes.
 
 The OAuth callback is `${APP_URL}/auth/callback`. The product action calls the
 same app origin using Shopify's signed OpenID Connect ID token; the backend
@@ -84,6 +87,10 @@ Set `NODE_ENV=production`, `APP_URL`, `SHOPIFY_API_KEY`,
 app and callback URLs are configured for
 `https://tcgpimporter.pandorasdeckbox.com`; keep these in sync with the Dev
 Dashboard if the domain changes. Then run `npm run shopify:deploy`.
+
+The app requires `read_products` to find similar catalog items and
+`read_publications` and `write_publications` to suggest and apply sales-channel
+selections. Reauthorize existing installations after adding these scopes.
 
 The app subscribes to `app/uninstalled` and Shopify's three mandatory privacy
 compliance topics. It stores only the shop domain and OAuth tokens, not

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { jwtVerify } from 'jose';
 
-const REQUIRED_SCOPES = ['write_products'];
+const REQUIRED_SCOPES = ['read_products', 'write_products', 'read_publications', 'write_publications'];
 const TOKEN_REFRESH_MARGIN_MS = 60_000;
 const TOKEN_REQUEST_TIMEOUT_MS = 10_000;
 
@@ -115,7 +115,7 @@ function parseTokenResponse(payload, shop, priorScope = '') {
   }
   const scope = typeof payload.scope === 'string' ? payload.scope : priorScope;
   if (!hasRequiredScopes(scope)) {
-    throw new ShopifyTokenError('Shopify did not grant the required write_products scope');
+    throw new ShopifyTokenError('Shopify did not grant the required access scopes');
   }
   const now = Date.now();
   return {

@@ -70,11 +70,24 @@ function successfulShopifyFetch(requests) {
         },
       });
     }
+    if (body.query.includes('publishablePublish')) {
+      return response({
+        data: {
+          publishablePublish: {
+            publishable: {
+              id: 'gid://shopify/Product/9001',
+              status: 'DRAFT',
+            },
+            userErrors: [],
+          },
+        },
+      });
+    }
     throw new Error(`Unexpected request: ${body.query}`);
   };
 }
 
-test('uploads an image and creates a Draft product with the default variant SKU and price', async () => {
+test('creates a Draft product with its suggested sales channels', async () => {
   const requests = [];
   const client = new ShopifyAdminClient({ fetchImpl: successfulShopifyFetch(requests) });
   const product = await client.createDraftProduct({
@@ -88,6 +101,7 @@ test('uploads an image and creates a Draft product with the default variant SKU 
     productType: 'Trading Card Game',
     templateSuffix: 'card-game',
     tags: ['One Piece'],
+    publicationIds: ['gid://shopify/Publication/100'],
     image,
   });
 
@@ -122,6 +136,16 @@ test('uploads an image and creates a Draft product with the default variant SKU 
     inventoryItem: { sku: '711385' },
   }]);
 
+  const publicationRequest = requests.find(request => (
+    request.url.endsWith('/graphql.json')
+    && JSON.parse(request.options.body).query.includes('publishablePublish')
+  ));
+  const publicationBody = JSON.parse(publicationRequest.options.body);
+  assert.deepEqual(publicationBody.variables.input, [
+    { publicationId: 'gid://shopify/Publication/100' },
+  ]);
+  assert.match(publicationBody.query, /status/);
+
   const upload = requests.find(request => request.url === 'https://staged-upload.example.com');
   assert.equal(upload.options.method, 'POST');
   assert.equal(upload.options.body.get('key'), 'image-key');
@@ -133,11 +157,47 @@ test('suggests metadata from matching Shopify catalog products', async () => {
   const client = new ShopifyAdminClient({
     fetchImpl: async (url, options) => {
       requests.push({ url, options });
+      const body = JSON.parse(options.body);
+      if (body.query.includes('ProductPublicationSuggestions')) {
+        return response({
+          data: {
+            nodes: [
+              {
+                id: 'gid://shopify/Product/9002',
+                resourcePublicationsV2: {
+                  nodes: [
+                    { publication: { id: 'gid://shopify/Publication/100', catalog: { title: 'Online Store' } }, isPublished: true },
+                    { publication: { id: 'gid://shopify/Publication/200', catalog: { title: 'Point of Sale' } }, isPublished: true },
+                  ],
+                },
+              },
+              {
+                id: 'gid://shopify/Product/9003',
+                resourcePublicationsV2: {
+                  nodes: [
+                    { publication: { id: 'gid://shopify/Publication/100', catalog: { title: 'Online Store' } }, isPublished: true },
+                    { publication: { id: 'gid://shopify/Publication/300', catalog: { title: 'Shop' } }, isPublished: true },
+                  ],
+                },
+              },
+              {
+                id: 'gid://shopify/Product/9004',
+                resourcePublicationsV2: {
+                  nodes: [
+                    { publication: { id: 'gid://shopify/Publication/100', catalog: { title: 'Online Store' } }, isPublished: true },
+                  ],
+                },
+              },
+            ],
+          },
+        });
+      }
       return response({
         data: {
           products: {
             nodes: [
               {
+                id: 'gid://shopify/Product/9001',
                 title: 'One Piece Heroines Booster Box',
                 vendor: 'Wrong default vendor',
                 productType: 'Uncategorized',
@@ -147,6 +207,7 @@ test('suggests metadata from matching Shopify catalog products', async () => {
                 variants: { nodes: [{ sku: '711385' }] },
               },
               {
+                id: 'gid://shopify/Product/9002',
                 title: 'One Piece Starter Deck',
                 vendor: 'Bandai',
                 productType: 'Trading Card Game',
@@ -160,6 +221,7 @@ test('suggests metadata from matching Shopify catalog products', async () => {
                 variants: { nodes: [{ sku: 'OP01' }] },
               },
               {
+                id: 'gid://shopify/Product/9003',
                 title: 'One Piece Romance Dawn Booster Box',
                 vendor: 'Bandai',
                 productType: 'Trading Card Game',
@@ -173,6 +235,16 @@ test('suggests metadata from matching Shopify catalog products', async () => {
                 variants: { nodes: [{ sku: 'OP02' }] },
               },
               {
+                id: 'gid://shopify/Product/9004',
+                title: 'One Piece Heroines Booster Pack',
+                vendor: '',
+                productType: '',
+                category: null,
+                tags: [],
+                variants: { nodes: [{ sku: 'OP03' }] },
+              },
+              {
+                id: 'gid://shopify/Product/9005',
                 title: 'Pokemon Elite Trainer Box',
                 vendor: 'Pokemon',
                 productType: 'Cards',
@@ -193,7 +265,7 @@ test('suggests metadata from matching Shopify catalog products', async () => {
     sku: '711385',
   });
 
-  assert.equal(suggestions.similarProductCount, 2);
+  assert.equal(suggestions.similarProductCount, 3);
   assert.deepEqual(suggestions.vendors, [{ value: 'Bandai', count: 2 }]);
   assert.deepEqual(suggestions.categories, [{
     id: 'gid://shopify/TaxonomyCategory/aa-1-2',
@@ -202,7 +274,7 @@ test('suggests metadata from matching Shopify catalog products', async () => {
     count: 2,
   }]);
   assert.deepEqual(suggestions.productTypes, [{ value: 'Trading Card Game', count: 2 }]);
-  assert.equal(suggestions.templates.find(template => !template.value).count, 1);
+  assert.equal(suggestions.templates.find(template => !template.value).count, 2);
   assert.deepEqual(suggestions.templates.find(template => template.value), {
     value: 'card-game',
     label: 'card-game',
@@ -214,17 +286,32 @@ test('suggests metadata from matching Shopify catalog products', async () => {
     { value: 'Card Game', count: 1 },
   ]);
   assert.deepEqual(suggestions.similarProducts.map(product => product.title), [
+    'One Piece Heroines Booster Pack',
     'One Piece Starter Deck',
     'One Piece Romance Dawn Booster Box',
+  ]);
+  assert.deepEqual(suggestions.publications, [
+    { id: 'gid://shopify/Publication/100', name: 'Online Store', count: 3, suggested: true },
+    { id: 'gid://shopify/Publication/200', name: 'Point of Sale', count: 1, suggested: false },
+    { id: 'gid://shopify/Publication/300', name: 'Shop', count: 1, suggested: false },
   ]);
 
   const request = requests[0];
   const body = JSON.parse(request.options.body);
   assert.match(body.query, /category \{ id name fullName \}/);
+  assert.match(body.query, /nodes\s*\{\s*id/);
   assert.equal(
     body.variables.search,
     'title:extra OR title:one OR title:piece OR title:heroines',
   );
+  const publicationRequest = requests[1];
+  const publicationBody = JSON.parse(publicationRequest.options.body);
+  assert.deepEqual(publicationBody.variables.productIds, [
+    'gid://shopify/Product/9004',
+    'gid://shopify/Product/9002',
+    'gid://shopify/Product/9003',
+  ]);
+  assert.match(publicationBody.query, /resourcePublicationsV2/);
 });
 
 test('matches catalog products using TCGplayer product-line and set breadcrumb context', async () => {
@@ -232,11 +319,16 @@ test('matches catalog products using TCGplayer product-line and set breadcrumb c
   const client = new ShopifyAdminClient({
     fetchImpl: async (url, options) => {
       requests.push({ url, options });
+      const body = JSON.parse(options.body);
+      if (body.query.includes('ProductPublicationSuggestions')) {
+        return response({ data: { nodes: [] } });
+      }
       return response({
         data: {
           products: {
             nodes: [
               {
+                id: 'gid://shopify/Product/9101',
                 title: "The World's Strongest Warriors Booster Box",
                 vendor: 'Wrong default vendor',
                 productType: 'Uncategorized',
@@ -245,6 +337,7 @@ test('matches catalog products using TCGplayer product-line and set breadcrumb c
                 variants: { nodes: [{ sku: '704752' }] },
               },
               {
+                id: 'gid://shopify/Product/9102',
                 title: 'One Piece Heroines Edition Booster Box',
                 vendor: 'Bandai',
                 productType: 'Trading Card Game',
@@ -258,6 +351,7 @@ test('matches catalog products using TCGplayer product-line and set breadcrumb c
                 variants: { nodes: [{ sku: '711385' }] },
               },
               {
+                id: 'gid://shopify/Product/9103',
                 title: 'One Piece Heroines Edition Booster Pack',
                 vendor: 'Bandai',
                 productType: 'Trading Card Game',
@@ -271,6 +365,7 @@ test('matches catalog products using TCGplayer product-line and set breadcrumb c
                 variants: { nodes: [{ sku: '711386' }] },
               },
               {
+                id: 'gid://shopify/Product/9104',
                 title: 'Pokemon Booster Box',
                 vendor: 'Pokemon',
                 productType: 'Cards',

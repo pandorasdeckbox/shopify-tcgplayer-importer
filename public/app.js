@@ -18,6 +18,8 @@ const vendorSuggestions = document.querySelector('#vendor-suggestions');
 const productTypeSuggestions = document.querySelector('#product-type-suggestions');
 const catalogSuggestionSummary = document.querySelector('#catalog-suggestion-summary');
 const tagSuggestions = document.querySelector('#tag-suggestions');
+const publicationSuggestions = document.querySelector('#publication-suggestions');
+const publicationNote = document.querySelector('#publication-note');
 const createButton = document.querySelector('#create-button');
 const startOverButton = document.querySelector('#start-over-button');
 const successPanel = document.querySelector('#success-panel');
@@ -58,6 +60,7 @@ function setBusy(busy, message = '') {
   templateInput.disabled = busy;
   tagsInput.disabled = busy;
   for (const button of tagSuggestions.querySelectorAll('button')) button.disabled = busy;
+  for (const input of publicationSuggestions.querySelectorAll('input')) input.disabled = busy;
   createButton.disabled = busy;
   startOverButton.disabled = busy;
   anotherImportButton.disabled = busy;
@@ -79,7 +82,7 @@ function populateDatalist(datalist, suggestions) {
   }
 }
 
-function renderCatalogSuggestions(suggestions) {
+function renderCatalogSuggestions(suggestions, selectedPublicationIds = []) {
   const similarProducts = suggestions?.similarProducts || [];
   const similarProductCount = suggestions?.similarProductCount || 0;
   const vendors = suggestions?.vendors || [];
@@ -87,6 +90,7 @@ function renderCatalogSuggestions(suggestions) {
   const productTypes = suggestions?.productTypes || [];
   const templates = suggestions?.templates || [];
   const tags = suggestions?.tags || [];
+  const publications = suggestions?.publications || [];
 
   if (similarProductCount) {
     const examples = similarProducts.map(item => item.title).join('; ');
@@ -138,6 +142,27 @@ function renderCatalogSuggestions(suggestions) {
     });
     tagSuggestions.append(button);
   }
+
+  publicationSuggestions.replaceChildren();
+  for (const publication of publications) {
+    const label = document.createElement('label');
+    label.className = 'publication-option';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = 'publicationIds';
+    checkbox.value = publication.id;
+    checkbox.checked = selectedPublicationIds.includes(publication.id);
+    checkbox.defaultChecked = checkbox.checked;
+    const name = document.createElement('span');
+    name.textContent = `${publication.name} (${publication.count} similar product${publication.count === 1 ? '' : 's'})`;
+    label.append(checkbox, name);
+    publicationSuggestions.append(label);
+  }
+  publicationNote.textContent = publications.length
+    ? 'Selected channels are suggested from similar products. The product stays Draft and hidden from buyers until activated.'
+    : similarProductCount
+      ? 'No selected sales channels were found among similar products.'
+      : 'Sales channel suggestions appear when similar products are found.';
 }
 
 function showPreview(nextProduct) {
@@ -148,7 +173,7 @@ function showPreview(nextProduct) {
   skuInput.value = product.sku;
   priceInput.value = product.price;
   descriptionInput.value = product.descriptionHtml;
-  renderCatalogSuggestions(product.catalogSuggestions);
+  renderCatalogSuggestions(product.catalogSuggestions, product.publicationIds || []);
   vendorInput.value = product.vendor || '';
   categoryInput.value = product.categoryId || '';
   productTypeInput.value = product.productType || '';
@@ -163,6 +188,8 @@ function resetImport() {
   product = null;
   lookupForm.reset();
   productForm.reset();
+  publicationSuggestions.replaceChildren();
+  publicationNote.textContent = '';
   productImage.removeAttribute('src');
   productImage.alt = '';
   lookupPanel.hidden = false;
@@ -208,6 +235,7 @@ productForm.addEventListener('submit', async event => {
       productType: productTypeInput.value,
       templateSuffix: templateInput.value,
       tags: tagsInput.value,
+      publicationIds: [...publicationSuggestions.querySelectorAll('input:checked')].map(input => input.value),
     });
     if (!result.product?.adminUrl) throw new Error('Shopify created the product but did not return its admin link.');
     createdTitle.textContent = result.product.title;
