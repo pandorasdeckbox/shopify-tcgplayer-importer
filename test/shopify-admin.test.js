@@ -141,6 +141,8 @@ test('creates a Draft product with its suggested sales channels', async () => {
     descriptionHtml: '<p>Description</p>',
     sku: '711385',
     price: '266.00',
+    cost: '12.75',
+    barcode: '0001234567890',
     vendor: 'Bandai',
     categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
     productType: 'Trading Card Game',
@@ -179,7 +181,8 @@ test('creates a Draft product with its suggested sales channels', async () => {
     id: 'gid://shopify/ProductVariant/9002',
     price: '266.00',
     inventoryPolicy: 'DENY',
-    inventoryItem: { sku: '711385', tracked: true },
+    inventoryItem: { sku: '711385', tracked: true, cost: '12.75' },
+    barcodes: [{ value: '0001234567890' }],
   }]);
 
   const inventoryRequests = requests.filter(request => (
@@ -233,6 +236,16 @@ test('deletes the Draft product if Shopify cannot confirm zero inventory', async
     }),
     error => error instanceof ShopifyAdminError && /Inventory activation denied/.test(error.message),
   );
+  const variantRequest = requests.find(request => (
+    request.url.endsWith('/graphql.json')
+    && JSON.parse(request.options.body).query.includes('productVariantsBulkUpdate')
+  ));
+  assert.deepEqual(JSON.parse(variantRequest.options.body).variables.variants, [{
+    id: 'gid://shopify/ProductVariant/9002',
+    price: '266.00',
+    inventoryPolicy: 'DENY',
+    inventoryItem: { sku: '711385', tracked: true },
+  }]);
   assert.ok(requests.some(request => (
     request.url.endsWith('/graphql.json')
     && JSON.parse(request.options.body).query.includes('productDelete')

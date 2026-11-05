@@ -173,6 +173,26 @@ function normalizeOptionalMetadataText(value, label) {
   return normalized;
 }
 
+function normalizeOptionalCost(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') throw new TcgplayerInputError('Cost per item must be text');
+  if (/[\u0000-\u001f\u007f]/.test(value)) {
+    throw new TcgplayerInputError('Cost per item must be a non-negative amount');
+  }
+
+  const raw = value.trim().replace(/[$,\s]/g, '');
+  if (!raw) return '';
+  const match = raw.match(/^([0-9]{1,9})(?:\.([0-9]{0,2}))?$/);
+  if (!match) {
+    throw new TcgplayerInputError('Cost per item must be a non-negative amount with up to 2 decimal places');
+  }
+  const wholeDollars = Number(match[1]);
+  if (!Number.isSafeInteger(wholeDollars)) {
+    throw new TcgplayerInputError('Cost per item is outside the supported range');
+  }
+  return `${wholeDollars}.${(match[2] || '').padEnd(2, '0')}`;
+}
+
 function normalizeProductTags(value) {
   if (value === undefined || value === null || value === '') return [];
   const values = typeof value === 'string' ? value.split(',') : value;
@@ -226,6 +246,8 @@ export function normalizeDraftFields(fields) {
   const sku = String(fields?.sku ?? '').trim();
   const descriptionHtml = sanitizeDescriptionHtml(fields?.descriptionHtml);
   const price = floorPriceToDollars(fields?.price);
+  const cost = normalizeOptionalCost(fields?.cost);
+  const barcode = normalizeOptionalMetadataText(fields?.barcode, 'UPC / GTIN / Barcode');
   const vendor = normalizeOptionalMetadataText(fields?.vendor, 'Vendor');
   const productType = normalizeOptionalMetadataText(fields?.productType, 'Product type');
   const categoryId = normalizeOptionalMetadataText(fields?.categoryId, 'Product category');
@@ -255,6 +277,8 @@ export function normalizeDraftFields(fields) {
     sku,
     descriptionHtml,
     price,
+    cost,
+    barcode,
     vendor,
     categoryId,
     productType,

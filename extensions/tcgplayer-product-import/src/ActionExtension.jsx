@@ -64,6 +64,8 @@ function Extension() {
         title: product.title,
         sku: product.sku,
         price: product.price,
+        cost: product.cost || '',
+        barcode: product.barcode || '',
         descriptionHtml: product.descriptionHtml,
         vendor: product.vendor,
         categoryId: product.categoryId,
@@ -154,6 +156,21 @@ function Extension() {
                 label={i18n.translate('price-label')}
                 value={product.price}
                 onChange={event => setProduct({ ...product, price: event.currentTarget.value })}
+                disabled={busy}
+              />
+              <s-banner tone="info">{i18n.translate('recommended-fields-note')}</s-banner>
+              <s-text-field
+                label={i18n.translate('cost-label')}
+                details={i18n.translate('cost-help')}
+                value={product.cost || ''}
+                onChange={event => setProduct({ ...product, cost: event.currentTarget.value })}
+                disabled={busy}
+              />
+              <s-text-field
+                label={i18n.translate('barcode-label')}
+                details={i18n.translate('barcode-help')}
+                value={product.barcode || ''}
+                onChange={event => setProduct({ ...product, barcode: event.currentTarget.value })}
                 disabled={busy}
               />
               <s-text-area

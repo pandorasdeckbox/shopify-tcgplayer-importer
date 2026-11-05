@@ -8,8 +8,11 @@ separate Draft product.
 
 The app imports the TCGplayer product name, description, Market Price, and
 product image. The URL's numeric product ID is the default variant SKU. Market
-Price is floored to whole USD dollars. Inventory is not changed. The image is
-contained within 880 × 880 pixels on a 1000 × 1000 white canvas.
+Price is floored to whole USD dollars. Staff can optionally enter the
+recommended per-item cost and UPC/GTIN/barcode; cost is stored for profit
+reporting, while barcodes help Google identify products. New products track
+inventory with zero available at all active locations and overselling disabled.
+The image is contained within 880 × 880 pixels on a 1000 × 1000 white canvas.
 
 The preview finds similar products in the current Shopify catalog using both
 the product title and TCGplayer's game and set breadcrumb data when available.
@@ -57,7 +60,8 @@ app or reusing its product content.
 5. Run `npm run dev` for the web service. Use a public HTTPS tunnel for local
    development and set the matching `APP_URL` and OAuth callback URL.
 6. Run `npm run shopify:dev` to preview the app and extension on a development
-   store. The app must be installed with the product and publication scopes.
+   store. The app must be installed with all product, inventory, location, and
+   publication scopes.
 
 The OAuth callback is `${APP_URL}/auth/callback`. The product action calls the
 same app origin using Shopify's signed OpenID Connect ID token; the backend

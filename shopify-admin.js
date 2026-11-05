@@ -515,6 +515,8 @@ export class ShopifyAdminClient {
     descriptionHtml,
     sku,
     price,
+    cost = '',
+    barcode = '',
     vendor = '',
     categoryId = '',
     productType = '',
@@ -601,7 +603,12 @@ export class ShopifyAdminClient {
             id: variantId,
             price,
             inventoryPolicy: 'DENY',
-            inventoryItem: { sku, tracked: true },
+            inventoryItem: {
+              sku,
+              tracked: true,
+              ...(cost ? { cost } : {}),
+            },
+            ...(barcode ? { barcodes: [{ value: barcode }] } : {}),
           }],
         },
       });

@@ -231,6 +231,8 @@ test('serves the embedded importer and authenticates preview/create requests', a
   const appHome = await appHomeResponse.text();
   assert.match(appHome, /id="lookup-form"/);
   assert.match(appHome, /id="product-vendor"/);
+  assert.match(appHome, /id="product-cost"/);
+  assert.match(appHome, /id="product-barcode"/);
   assert.match(appHome, /id="product-category"/);
   assert.match(appHome, /id="product-type"/);
   assert.match(appHome, /id="product-template"/);
@@ -241,6 +243,8 @@ test('serves the embedded importer and authenticates preview/create requests', a
   const appScript = await appScriptResponse.text();
   assert.match(appScript, /\/api\/import\/preview/);
   assert.match(appScript, /\/api\/import\/create/);
+  assert.match(appScript, /cost: costInput\.value/);
+  assert.match(appScript, /barcode: barcodeInput\.value/);
 
   const unauthenticated = await fetch(`${baseUrl}/api/import/preview`, {
     method: 'POST',
@@ -261,6 +265,8 @@ test('serves the embedded importer and authenticates preview/create requests', a
   const preview = (await previewResponse.json()).product;
   assert.equal(preview.sku, '711385');
   assert.equal(preview.price, '266.00');
+  assert.equal(preview.cost, '');
+  assert.equal(preview.barcode, '');
   assert.equal(preview.vendor, 'Bandai');
   assert.equal(preview.categoryId, 'gid://shopify/TaxonomyCategory/aa-1-2');
   assert.equal(preview.productType, 'Trading Card Game');
@@ -282,6 +288,8 @@ test('serves the embedded importer and authenticates preview/create requests', a
       title: 'Edited title',
       sku: '711385',
       price: '266.73',
+      cost: '12.50',
+      barcode: '0001234567890',
       descriptionHtml: '<p>Edited description</p><script>unsafe()</script>',
       vendor: 'Bandai',
       categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
@@ -297,6 +305,8 @@ test('serves the embedded importer and authenticates preview/create requests', a
   assert.equal(created.title, 'Edited title');
   assert.equal(created.sku, '711385');
   assert.equal(created.price, '266.00');
+  assert.equal(created.cost, '12.50');
+  assert.equal(created.barcode, '0001234567890');
   assert.equal(created.descriptionHtml, '<p>Edited description</p>');
   assert.equal(created.vendor, 'Bandai');
   assert.equal(created.categoryId, 'gid://shopify/TaxonomyCategory/aa-1-2');

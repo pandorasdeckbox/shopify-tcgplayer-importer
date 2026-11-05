@@ -8,6 +8,8 @@ const productImage = document.querySelector('#product-image');
 const titleInput = document.querySelector('#product-title');
 const skuInput = document.querySelector('#product-sku');
 const priceInput = document.querySelector('#product-price');
+const costInput = document.querySelector('#product-cost');
+const barcodeInput = document.querySelector('#product-barcode');
 const descriptionInput = document.querySelector('#product-description');
 const vendorInput = document.querySelector('#product-vendor');
 const categoryInput = document.querySelector('#product-category');
@@ -55,6 +57,8 @@ function setBusy(busy, message = '') {
   urlInput.disabled = busy;
   fetchButton.disabled = busy;
   vendorInput.disabled = busy;
+  costInput.disabled = busy;
+  barcodeInput.disabled = busy;
   categoryInput.disabled = busy;
   productTypeInput.disabled = busy;
   templateInput.disabled = busy;
@@ -172,6 +176,8 @@ function showPreview(nextProduct) {
   titleInput.value = product.title;
   skuInput.value = product.sku;
   priceInput.value = product.price;
+  costInput.value = product.cost || '';
+  barcodeInput.value = product.barcode || '';
   descriptionInput.value = product.descriptionHtml;
   renderCatalogSuggestions(product.catalogSuggestions, product.publicationIds || []);
   vendorInput.value = product.vendor || '';
@@ -229,6 +235,8 @@ productForm.addEventListener('submit', async event => {
       title: titleInput.value,
       sku: skuInput.value,
       price: priceInput.value,
+      cost: costInput.value,
+      barcode: barcodeInput.value,
       descriptionHtml: descriptionInput.value,
       vendor: vendorInput.value,
       categoryId: categoryInput.value,

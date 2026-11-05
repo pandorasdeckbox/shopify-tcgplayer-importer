@@ -221,6 +221,8 @@ export function createApp({
       return res.json({
         product: {
           ...product,
+          cost: '',
+          barcode: '',
           vendor: catalogSuggestions.vendors[0]?.value || '',
           categoryId: catalogSuggestions.categories[0]?.id || '',
           productType: catalogSuggestions.productTypes[0]?.value || '',

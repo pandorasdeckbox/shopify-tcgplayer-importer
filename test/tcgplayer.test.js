@@ -106,6 +106,8 @@ test('normalizes and validates fields again before product creation', () => {
     title: 'Edited title',
     sku: '711385',
     price: '266.73',
+    cost: '$1,234.5',
+    barcode: ' 0001234567890 ',
     descriptionHtml: '<p>Description</p><script>unsafe()</script>',
     vendor: ' Bandai ',
     categoryId: 'gid://shopify/TaxonomyCategory/aa-1-2',
@@ -117,6 +119,8 @@ test('normalizes and validates fields again before product creation', () => {
   assert.equal(fields.title, 'Edited title');
   assert.equal(fields.sku, '711385');
   assert.equal(fields.price, '266.00');
+  assert.equal(fields.cost, '1234.50');
+  assert.equal(fields.barcode, '0001234567890');
   assert.equal(fields.descriptionHtml, '<p>Description</p>');
   assert.equal(fields.sourceProductId, '711385');
   assert.equal(fields.vendor, 'Bandai');
@@ -156,4 +160,23 @@ test('normalizes and validates fields again before product creation', () => {
     descriptionHtml: '<p>Description</p>',
     publicationIds: ['gid://shopify/Product/9001'],
   }), TcgplayerInputError);
+});
+
+test('keeps cost and barcode optional while validating provided values', () => {
+  const fields = {
+    sourceUrl: 'https://www.tcgplayer.com/product/711385/',
+    title: 'Edited title',
+    sku: '711385',
+    price: '266.00',
+    descriptionHtml: '<p>Description</p>',
+  };
+  const normalized = normalizeDraftFields(fields);
+  assert.equal(normalized.cost, '');
+  assert.equal(normalized.barcode, '');
+  assert.equal(normalizeDraftFields({ ...fields, cost: '0' }).cost, '0.00');
+  assert.throws(() => normalizeDraftFields({ ...fields, cost: '-1.00' }), TcgplayerInputError);
+  assert.throws(() => normalizeDraftFields({ ...fields, cost: '1.234' }), TcgplayerInputError);
+  assert.throws(() => normalizeDraftFields({ ...fields, cost: 5 }), TcgplayerInputError);
+  assert.throws(() => normalizeDraftFields({ ...fields, barcode: 12345 }), TcgplayerInputError);
+  assert.throws(() => normalizeDraftFields({ ...fields, barcode: 'x'.repeat(256) }), TcgplayerInputError);
 });

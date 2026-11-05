@@ -9,6 +9,11 @@
   "title-label": "Title",
   "sku-label": "SKU",
   "price-label": "Price (USD)",
+  "recommended-fields-note": "These can be blank, but fill them in whenever possible. Cost helps calculate true profit; a UPC/GTIN/barcode helps Google identify your product.",
+  "cost-label": "Cost per item (recommended)",
+  "cost-help": "Enter your purchase cost per unit in your Shopify store's currency.",
+  "barcode-label": "UPC / GTIN / Barcode (recommended)",
+  "barcode-help": "Enter the code exactly as printed. Leading zeros are preserved.",
   "description-label": "Description (HTML)",
   "vendor-label": "Vendor",
   "category-label": "Category",
@@ -29,5 +34,5 @@
   "creating": "Creating Draft product…",
   "success": "Draft product created.",
   "error-title": "Could not import product",
-  "edit-note": "Review and edit these fields before creating a new Draft product. Inventory will not be changed."
+  "edit-note": "Review and edit these fields before creating a new Draft product. Inventory is tracked at zero at all active locations, and overselling is disabled."
 }

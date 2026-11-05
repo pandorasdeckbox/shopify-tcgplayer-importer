@@ -55,6 +55,25 @@
             <label for="product-price">Price (USD)</label>
             <input id="product-price" name="price" type="text" inputmode="decimal" required>
 
+            <fieldset class="recommended-fields" aria-describedby="recommended-fields-note">
+              <legend>Recommended details</legend>
+              <p id="recommended-fields-note" class="recommendation-note">
+                These can be blank, but should not be when the information is available. Cost helps calculate true profit; a UPC/GTIN/barcode helps Google identify your product.
+              </p>
+              <div class="metadata-grid">
+                <div class="metadata-field">
+                  <label for="product-cost">Cost per item <span class="field-recommendation">Recommended</span></label>
+                  <input id="product-cost" name="cost" type="text" inputmode="decimal" placeholder="e.g. 12.50" autocomplete="off" aria-describedby="product-cost-help">
+                  <p id="product-cost-help" class="recommended-field-help">Enter your purchase cost per unit in your Shopify store's currency.</p>
+                </div>
+                <div class="metadata-field">
+                  <label for="product-barcode">UPC / GTIN / Barcode <span class="field-recommendation">Recommended</span></label>
+                  <input id="product-barcode" name="barcode" type="text" placeholder="Enter code as printed" autocomplete="off" aria-describedby="product-barcode-help">
+                  <p id="product-barcode-help" class="recommended-field-help">Enter the code exactly as printed. Leading zeros are preserved.</p>
+                </div>
+              </div>
+            </fieldset>
+
             <label for="product-description">Description (HTML)</label>
             <textarea id="product-description" name="description" rows="12"></textarea>
 
@@ -97,7 +116,7 @@
               </div>
             </fieldset>
 
-            <p class="help-text">The image is centered on a 1000 x 1000 white canvas. Inventory will not be changed. Draft products remain hidden from buyers until activated.</p>
+            <p class="help-text">The image is centered on a 1000 x 1000 white canvas. Inventory tracking is enabled, active locations start at zero, and overselling is disabled. Draft products remain hidden from buyers until activated.</p>
             <div class="button-row">
               <button id="create-button" type="submit">Create Draft product</button>
               <button id="start-over-button" class="secondary-button" type="button">Start over</button>
