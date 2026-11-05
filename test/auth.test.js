@@ -34,16 +34,17 @@ async function signedIdToken(shop = 'example-store.myshopify.com', overrides = {
 }
 
 test('sanitizes Shopify shop domains and requires product, inventory, and publication scopes', () => {
+  const writeScopes = 'write_products,read_locations,write_inventory,write_publications';
   assert.equal(sanitizeShop(' Example-Store.myshopify.com '), 'example-store.myshopify.com');
   assert.equal(sanitizeShop('https://example-store.myshopify.com'), null);
   assert.equal(sanitizeShop('evil.example.com'), null);
   assert.deepEqual(getMissingScopes('read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications'), []);
-  assert.deepEqual(getMissingScopes('read_products,write_products,read_locations,read_inventory,write_inventory,write_publications'), ['read_publications']);
+  assert.deepEqual(getMissingScopes(writeScopes), []);
   assert.equal(hasRequiredScopes('read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications'), true);
-  assert.equal(hasRequiredScopes('read_products,write_products,read_inventory,write_inventory,read_publications,write_publications'), false);
-  assert.equal(hasRequiredScopes('read_products,write_products,read_locations,write_inventory,read_publications,write_publications'), false);
-  assert.equal(hasRequiredScopes('read_products,write_products,read_locations,read_inventory,read_publications,write_publications'), false);
-  assert.equal(hasRequiredScopes('read_products,write_products,read_locations,read_inventory,write_inventory,write_publications'), false);
+  assert.equal(hasRequiredScopes(writeScopes), true);
+  assert.equal(hasRequiredScopes('write_products,write_inventory,write_publications'), false);
+  assert.equal(hasRequiredScopes('read_products,read_locations,read_inventory,read_publications'), false);
+  assert.deepEqual(getMissingScopes('read_products,write_products,read_locations,read_inventory,write_inventory,read_publications'), ['write_publications']);
   assert.equal(hasRequiredScopes('write_products'), false);
 });
 

@@ -11,6 +11,7 @@ const shop = 'example-store.myshopify.com';
 const apiKey = 'test-client-id';
 const apiSecret = 'test-client-secret';
 const scopes = 'read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications';
+const grantedWriteScopes = 'write_products,read_locations,write_inventory,write_publications';
 
 async function createIdToken() {
   return new SignJWT({ dest: `https://${shop}` })
@@ -48,7 +49,7 @@ test('exchanges the OAuth code for expiring offline tokens', async t => {
       return new Response(JSON.stringify({
         access_token: 'offline-access-token',
         refresh_token: 'offline-refresh-token',
-        scope: scopes,
+        scope: grantedWriteScopes,
         expires_in: 3600,
         refresh_token_expires_in: 7776000,
       }), {
@@ -92,12 +93,13 @@ test('exchanges the OAuth code for expiring offline tokens', async t => {
   const session = await db.loadShopifySession(shop);
   assert.equal(session.accessToken, 'offline-access-token');
   assert.equal(session.refreshToken, 'offline-refresh-token');
+  assert.equal(session.scope, grantedWriteScopes);
 });
 
 test('reports the exact scopes missing from Shopify OAuth grant', async t => {
   const db = await new AppDatabase({ sqlitePath: ':memory:' }).init();
   t.after(() => db.close());
-  const grantedScopes = scopes.split(',').filter(scope => scope !== 'read_publications').join(',');
+  const grantedScopes = scopes.split(',').filter(scope => scope !== 'write_publications').join(',');
   const app = createApp({
     db,
     config: {
@@ -140,7 +142,7 @@ test('reports the exact scopes missing from Shopify OAuth grant', async t => {
   });
 
   assert.equal(callbackResponse.status, 403);
-  assert.match(await callbackResponse.text(), /Missing: read_publications/);
+  assert.match(await callbackResponse.text(), /Missing: write_publications/);
   assert.equal(await db.loadShopifySession(shop), null);
 });
 

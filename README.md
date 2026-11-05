@@ -98,7 +98,9 @@ The app requires `read_products` to find similar catalog items,
 and set available quantities to zero at active locations, and `read_publications` and
 `write_publications` to suggest and apply sales-channel selections. New
 products are configured to deny overselling. Reauthorize existing
-installations after adding these scopes.
+installations after adding these scopes. Shopify may return only a `write_*`
+scope because it also grants the matching `read_*` access; the OAuth scope
+check treats that write grant as satisfying its corresponding read scope.
 
 The app subscribes to `app/uninstalled` and Shopify's three mandatory privacy
 compliance topics. It stores only the shop domain and OAuth tokens, not

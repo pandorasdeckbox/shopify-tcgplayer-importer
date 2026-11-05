@@ -30,7 +30,10 @@ export function sanitizeShop(value) {
 
 export function getMissingScopes(scope) {
   const granted = new Set(String(scope || '').split(',').map(value => value.trim()).filter(Boolean));
-  return REQUIRED_SCOPES.filter(required => !granted.has(required));
+  return REQUIRED_SCOPES.filter(required => (
+    !granted.has(required)
+    && !(required.startsWith('read_') && granted.has(`write_${required.slice(5)}`))
+  ));
 }
 
 export function createOAuthState() {
