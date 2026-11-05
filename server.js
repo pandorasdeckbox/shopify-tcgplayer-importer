@@ -10,6 +10,7 @@ import {
   createOAuthState,
   createShopifyAuth,
   getMissingScopes,
+  hasRequiredScopes,
   sanitizeShop,
   ShopifyTokenError,
   verifyOAuthHmac,
