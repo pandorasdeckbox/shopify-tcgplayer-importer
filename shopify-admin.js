@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export class ShopifyAdminError extends Error {
   statusCode = 502;
 
@@ -303,6 +305,79 @@ export class ShopifyAdminClient {
     return payload.data;
   }
 
+  async activeInventoryLocationIds({ session }) {
+    const locationIds = [];
+    const seenCursors = new Set();
+    let after = null;
+
+    while (true) {
+      const data = await this.graphql({
+        session,
+        query: `query ActiveInventoryLocations($after: String) {
+          locations(first: 250, after: $after, includeLegacy: true) {
+            nodes { id }
+            pageInfo { hasNextPage endCursor }
+          }
+        }`,
+        variables: { after },
+      });
+      const locations = data.locations;
+      if (!Array.isArray(locations?.nodes) || typeof locations.pageInfo?.hasNextPage !== 'boolean') {
+        throw new ShopifyAdminError('Shopify did not return active inventory locations');
+      }
+
+      for (const location of locations.nodes) {
+        if (typeof location?.id !== 'string' || !location.id.startsWith('gid://shopify/Location/')) {
+          throw new ShopifyAdminError('Shopify returned an invalid inventory location');
+        }
+        locationIds.push(location.id);
+      }
+
+      if (!locations.pageInfo.hasNextPage) break;
+      const cursor = locations.pageInfo.endCursor;
+      if (typeof cursor !== 'string' || !cursor || seenCursors.has(cursor)) {
+        throw new ShopifyAdminError('Shopify returned invalid inventory location pagination');
+      }
+      seenCursors.add(cursor);
+      after = cursor;
+    }
+
+    if (!locationIds.length) {
+      throw new ShopifyAdminError('Shopify has no active inventory locations to initialize');
+    }
+    return locationIds;
+  }
+
+  async activateInventoryAtZero({ session, inventoryItemId, locationId }) {
+    const data = await this.graphql({
+      session,
+      query: `mutation ActivateImportedInventoryAtZero($inventoryItemId: ID!, $locationId: ID!, $idempotencyKey: String!) {
+        inventoryActivate(
+          inventoryItemId: $inventoryItemId,
+          locationId: $locationId,
+          available: 0,
+          onHand: 0
+        ) @idempotent(key: $idempotencyKey) {
+          inventoryLevel {
+            id
+            quantities(names: ["available"]) { name quantity }
+          }
+          userErrors { field message }
+        }
+      }`,
+      variables: { inventoryItemId, locationId, idempotencyKey: randomUUID() },
+    });
+    const activation = data.inventoryActivate;
+    const availableQuantity = activation?.inventoryLevel?.quantities
+      ?.find(quantity => quantity?.name === 'available')?.quantity;
+    if (activation?.userErrors?.length || availableQuantity !== 0) {
+      throw new ShopifyAdminError(userErrorMessage(
+        activation?.userErrors,
+        'Shopify did not initialize inventory to zero at an active location',
+      ));
+    }
+  }
+
   async getProductMetadataSuggestions({ session, title, sku, productLineName, setName }) {
     const searchTerms = productCatalogSearchTerms(title, productLineName, setName);
     const matchContext = { productLineName, setName };
@@ -448,6 +523,7 @@ export class ShopifyAdminClient {
     publicationIds = [],
     image,
   }) {
+    const inventoryLocationIds = await this.activeInventoryLocationIds({ session });
     const originalSource = await this.uploadProductImage({ session, image });
     const productInput = { title, descriptionHtml, status: 'DRAFT' };
     if (vendor) productInput.vendor = vendor;
@@ -513,7 +589,8 @@ export class ShopifyAdminClient {
             productVariants {
               id
               price
-              inventoryItem { sku }
+              inventoryPolicy
+              inventoryItem { id sku tracked }
             }
             userErrors { field message }
           }
@@ -523,7 +600,8 @@ export class ShopifyAdminClient {
           variants: [{
             id: variantId,
             price,
-            inventoryItem: { sku },
+            inventoryPolicy: 'DENY',
+            inventoryItem: { sku, tracked: true },
           }],
         },
       });
@@ -531,13 +609,28 @@ export class ShopifyAdminClient {
       if (update?.userErrors?.length || !update?.productVariants?.length) {
         throw new ShopifyAdminError(userErrorMessage(update?.userErrors, 'Shopify did not update the default variant'));
       }
+      const updatedVariant = update.productVariants[0];
+      if (
+        typeof updatedVariant.inventoryItem?.id !== 'string'
+        || updatedVariant.inventoryItem.tracked !== true
+        || updatedVariant.inventoryPolicy !== 'DENY'
+      ) {
+        throw new ShopifyAdminError('Shopify did not enable tracked inventory with overselling disabled');
+      }
+      for (const locationId of inventoryLocationIds) {
+        await this.activateInventoryAtZero({
+          session,
+          inventoryItemId: updatedVariant.inventoryItem.id,
+          locationId,
+        });
+      }
     } catch (error) {
       try {
         await this.deleteProduct({ session, productId });
       } catch {
         const adminId = numericProductId(productId);
         throw new PartialProductCreationError(
-          `Shopify created draft product ${adminId || productId}, but variant setup failed and automatic cleanup failed. Review it in Shopify Admin.`,
+          `Shopify created draft product ${adminId || productId}, but variant or inventory setup failed and automatic cleanup failed. Review it in Shopify Admin.`,
         );
       }
       throw error;

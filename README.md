@@ -46,8 +46,9 @@ app or reusing its product content.
    the distribution card, choose **Public distribution** if this app is meant
    for App Store review. Shopify says this choice cannot be changed later.
 3. Configure the app's public URL, OAuth callback, `read_products`,
-   `write_products`, `read_publications`, and `write_publications` scopes, and
-   the Admin action extension in the Dev Dashboard / Shopify CLI configuration.
+   `write_products`, `read_locations`, `read_inventory`, `write_inventory`,
+   `read_publications`, and `write_publications` scopes, and the Admin action
+   extension in the Dev Dashboard / Shopify CLI configuration.
    The production app URL must not contain the word `Shopify`.
 4. Copy `.env.example` to `.env` and set `SHOPIFY_API_KEY`,
    `SHOPIFY_API_SECRET`, `APP_URL`, and a local `SQLITE_PATH`. `APP_URL` is the
@@ -88,9 +89,12 @@ app and callback URLs are configured for
 `https://tcgpimporter.pandorasdeckbox.com`; keep these in sync with the Dev
 Dashboard if the domain changes. Then run `npm run shopify:deploy`.
 
-The app requires `read_products` to find similar catalog items and
-`read_publications` and `write_publications` to suggest and apply sales-channel
-selections. Reauthorize existing installations after adding these scopes.
+The app requires `read_products` to find similar catalog items,
+`read_locations`, `read_inventory`, and `write_inventory` to track inventory
+and set available quantities to zero at active locations, and `read_publications` and
+`write_publications` to suggest and apply sales-channel selections. New
+products are configured to deny overselling. Reauthorize existing
+installations after adding these scopes.
 
 The app subscribes to `app/uninstalled` and Shopify's three mandatory privacy
 compliance topics. It stores only the shop domain and OAuth tokens, not

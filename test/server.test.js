@@ -10,7 +10,7 @@ import { createApp } from '../server.js';
 const shop = 'example-store.myshopify.com';
 const apiKey = 'test-client-id';
 const apiSecret = 'test-client-secret';
-const scopes = 'read_products,write_products,read_publications,write_publications';
+const scopes = 'read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications';
 
 async function createIdToken() {
   return new SignJWT({ dest: `https://${shop}` })

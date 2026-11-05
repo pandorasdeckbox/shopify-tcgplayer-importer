@@ -32,13 +32,15 @@ async function signedIdToken(shop = 'example-store.myshopify.com', overrides = {
     .sign(new TextEncoder().encode(config.shopifyApiSecret));
 }
 
-test('sanitizes Shopify shop domains and requires product and publication scopes', () => {
+test('sanitizes Shopify shop domains and requires product, inventory, and publication scopes', () => {
   assert.equal(sanitizeShop(' Example-Store.myshopify.com '), 'example-store.myshopify.com');
   assert.equal(sanitizeShop('https://example-store.myshopify.com'), null);
   assert.equal(sanitizeShop('evil.example.com'), null);
-  assert.equal(hasRequiredScopes('read_products,write_products,read_publications,write_publications'), true);
-  assert.equal(hasRequiredScopes('write_products,read_publications,write_publications'), false);
-  assert.equal(hasRequiredScopes('read_products,write_products,write_publications'), false);
+  assert.equal(hasRequiredScopes('read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications'), true);
+  assert.equal(hasRequiredScopes('read_products,write_products,read_inventory,write_inventory,read_publications,write_publications'), false);
+  assert.equal(hasRequiredScopes('read_products,write_products,read_locations,write_inventory,read_publications,write_publications'), false);
+  assert.equal(hasRequiredScopes('read_products,write_products,read_locations,read_inventory,read_publications,write_publications'), false);
+  assert.equal(hasRequiredScopes('read_products,write_products,read_locations,read_inventory,write_inventory,write_publications'), false);
   assert.equal(hasRequiredScopes('write_products'), false);
 });
 
@@ -93,7 +95,7 @@ test('refreshes expiring offline tokens and persists the rotated refresh token',
   await db.storeShopifySession({
     shop,
     accessToken: 'expired-access-token',
-    scope: 'read_products,write_products,read_publications,write_publications',
+    scope: 'read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications',
     expiresAt: now - 1,
     refreshToken: 'old-refresh-token',
     refreshTokenExpiresAt: now + 60 * 60 * 1000,
@@ -110,7 +112,7 @@ test('refreshes expiring offline tokens and persists the rotated refresh token',
         refresh_token: 'fresh-refresh-token',
         expires_in: 3600,
         refresh_token_expires_in: 7776000,
-        scope: 'read_products,write_products,read_publications,write_publications',
+        scope: 'read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications',
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     },
   });

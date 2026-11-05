@@ -19,13 +19,28 @@ function response(data, status = 200) {
   });
 }
 
-function successfulShopifyFetch(requests) {
+function successfulShopifyFetch(requests, { failInventoryActivation = false } = {}) {
   return async (url, options) => {
     requests.push({ url, options });
     if (url === 'https://staged-upload.example.com') {
       return new Response(null, { status: 204 });
     }
     const body = JSON.parse(options.body);
+    if (body.query.includes('ActiveInventoryLocations')) {
+      return response({
+        data: {
+          locations: body.variables.after
+            ? {
+              nodes: [{ id: 'gid://shopify/Location/3002' }],
+              pageInfo: { hasNextPage: false, endCursor: null },
+            }
+            : {
+              nodes: [{ id: 'gid://shopify/Location/3001' }],
+              pageInfo: { hasNextPage: true, endCursor: 'inventory-location-page-2' },
+            },
+        },
+      });
+    }
     if (body.query.includes('stagedUploadsCreate')) {
       return response({
         data: {
@@ -63,9 +78,29 @@ function successfulShopifyFetch(requests) {
             productVariants: [{
               id: 'gid://shopify/ProductVariant/9002',
               price: '266.00',
-              inventoryItem: { sku: '711385' },
+              inventoryPolicy: 'DENY',
+              inventoryItem: {
+                id: 'gid://shopify/InventoryItem/9003',
+                sku: '711385',
+                tracked: true,
+              },
             }],
             userErrors: [],
+          },
+        },
+      });
+    }
+    if (body.query.includes('inventoryActivate')) {
+      return response({
+        data: {
+          inventoryActivate: {
+            inventoryLevel: {
+              id: `gid://shopify/InventoryLevel/${body.variables.locationId.split('/').at(-1)}`,
+              quantities: [{ name: 'available', quantity: 0 }],
+            },
+            userErrors: failInventoryActivation
+              ? [{ field: ['locationId'], message: 'Inventory activation denied' }]
+              : [],
           },
         },
       });
@@ -78,6 +113,16 @@ function successfulShopifyFetch(requests) {
               id: 'gid://shopify/Product/9001',
               status: 'DRAFT',
             },
+            userErrors: [],
+          },
+        },
+      });
+    }
+    if (body.query.includes('productDelete')) {
+      return response({
+        data: {
+          productDelete: {
+            deletedProductId: 'gid://shopify/Product/9001',
             userErrors: [],
           },
         },
@@ -133,8 +178,27 @@ test('creates a Draft product with its suggested sales channels', async () => {
   assert.deepEqual(variantVariables.variants, [{
     id: 'gid://shopify/ProductVariant/9002',
     price: '266.00',
-    inventoryItem: { sku: '711385' },
+    inventoryPolicy: 'DENY',
+    inventoryItem: { sku: '711385', tracked: true },
   }]);
+
+  const inventoryRequests = requests.filter(request => (
+    request.url.endsWith('/graphql.json')
+    && JSON.parse(request.options.body).query.includes('inventoryActivate')
+  ));
+  assert.equal(inventoryRequests.length, 2);
+  assert.deepEqual(inventoryRequests.map(request => JSON.parse(request.options.body).variables.locationId), [
+    'gid://shopify/Location/3001',
+    'gid://shopify/Location/3002',
+  ]);
+  for (const request of inventoryRequests) {
+    const body = JSON.parse(request.options.body);
+    assert.equal(body.variables.inventoryItemId, 'gid://shopify/InventoryItem/9003');
+    assert.match(body.variables.idempotencyKey, /^[0-9a-f-]{36}$/);
+    assert.match(body.query, /available:\s*0/);
+    assert.match(body.query, /onHand:\s*0/);
+    assert.match(body.query, /@idempotent\(key:\s*\$idempotencyKey\)/);
+  }
 
   const publicationRequest = requests.find(request => (
     request.url.endsWith('/graphql.json')
@@ -150,6 +214,29 @@ test('creates a Draft product with its suggested sales channels', async () => {
   assert.equal(upload.options.method, 'POST');
   assert.equal(upload.options.body.get('key'), 'image-key');
   assert.equal(upload.options.body.get('file').name, 'tcgplayer-711385.jpg');
+});
+
+test('deletes the Draft product if Shopify cannot confirm zero inventory', async () => {
+  const requests = [];
+  const client = new ShopifyAdminClient({
+    fetchImpl: successfulShopifyFetch(requests, { failInventoryActivation: true }),
+  });
+
+  await assert.rejects(
+    client.createDraftProduct({
+      session,
+      title: 'Booster Box',
+      descriptionHtml: '<p>Description</p>',
+      sku: '711385',
+      price: '266.00',
+      image,
+    }),
+    error => error instanceof ShopifyAdminError && /Inventory activation denied/.test(error.message),
+  );
+  assert.ok(requests.some(request => (
+    request.url.endsWith('/graphql.json')
+    && JSON.parse(request.options.body).query.includes('productDelete')
+  )));
 });
 
 test('suggests metadata from matching Shopify catalog products', async () => {
@@ -409,6 +496,16 @@ test('deletes a newly created product if its variant cannot be updated', async (
     requests.push({ url, options });
     if (url === 'https://staged-upload.example.com') return new Response(null, { status: 204 });
     const body = JSON.parse(options.body);
+    if (body.query.includes('ActiveInventoryLocations')) {
+      return response({
+        data: {
+          locations: {
+            nodes: [{ id: 'gid://shopify/Location/3001' }],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
+      });
+    }
     if (body.query.includes('stagedUploadsCreate')) {
       return response({
         data: {

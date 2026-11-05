@@ -92,7 +92,7 @@ export function createApp({
       const authorizationUrl = new URL(`https://${shop}/admin/oauth/authorize`);
       authorizationUrl.search = new URLSearchParams({
         client_id: config.shopifyApiKey,
-        scope: 'read_products,write_products,read_publications,write_publications',
+        scope: 'read_products,write_products,read_locations,read_inventory,write_inventory,read_publications,write_publications',
         redirect_uri: `${config.appUrl}/auth/callback`,
         state,
       }).toString();
